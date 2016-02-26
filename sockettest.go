@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"database/sql"
+	_"github.com/go-sql-driver/mysql"
 
 	"github.com/gorilla/websocket"
 )
@@ -59,6 +61,32 @@ func main() {
 				return
 			}
 			log.Printf("recv: %s", message)
+
+			db, err := sql.Open("mysql",
+				"root:@tcp(127.0.0.1:3306)/treebeer")
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			stmt, err := db.Prepare("INSERT INTO event(created_at, raw_message) VALUES(?, ?)")
+			if err != nil {
+				log.Fatal(err)
+			}
+			res, err := stmt.Exec(time.Now(), message)
+			if err != nil {
+				log.Fatal(err)
+			}
+			lastId, err := res.LastInsertId()
+			if err != nil {
+				log.Fatal(err)
+			}
+			rowCnt, err := res.RowsAffected()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			log.Printf("lastId: %s", lastId)
+			log.Printf("rowCnt: %s", rowCnt)
 		}
 	}()
 
