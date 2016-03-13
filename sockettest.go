@@ -51,6 +51,12 @@ func main() {
 
 	done := make(chan struct{})
 
+	db, err := sql.Open("mysql",
+		"root:@tcp(127.0.0.1:3306)/treebeer")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
 		defer c.Close()
 		defer close(done)
@@ -61,12 +67,6 @@ func main() {
 				return
 			}
 			log.Printf("recv: %s", message)
-
-			db, err := sql.Open("mysql",
-				"root:@tcp(127.0.0.1:3306)/treebeer")
-			if err != nil {
-				log.Fatal(err)
-			}
 
 			stmt, err := db.Prepare("INSERT INTO event(created_at, raw_message) VALUES(?, ?)")
 			if err != nil {
