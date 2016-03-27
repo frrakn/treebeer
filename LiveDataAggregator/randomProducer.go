@@ -11,6 +11,7 @@ Usage: Testing LiveDataAggregator
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -35,7 +36,7 @@ type Producer struct {
 	totalRandos   map[string]int
 	randosToTrack chan map[string]int
 	randosToSend  chan map[string]int
-	connection    net.Conn
+	writer        *bufio.Writer
 }
 
 func main() {
@@ -54,7 +55,7 @@ func main() {
 	producer.totalRandos = make(map[string]int)
 	producer.randosToSend = make(chan map[string]int)
 	producer.randosToTrack = make(chan map[string]int)
-	producer.connection = connection
+	producer.writer = bufio.NewWriter(connection)
 
 	fmt.Println("Main: Starting to rando generation...")
 	go producer.generateRandos(maxNumKeys, maxKeyValue, maxInc)
@@ -77,7 +78,6 @@ func (p *Producer) generateRandos(maxNumKeys int, maxKeyValue int, maxInc int) {
 
 		for i := 0; i <= numGen; i++ {
 			key, inc := generateKeyValue(maxKeyValue, maxInc)
-			fmt.Printf("KEY:%s :: INC:%s\n", key, inc)
 			rando[strconv.Itoa(key)] += inc
 		}
 
@@ -102,12 +102,9 @@ func (p *Producer) trackRandos() {
 func (p *Producer) sendRandos() {
 	for {
 		rando := <-p.randosToSend
-		bytes, _ := json.Marshal(rando)
-		bytesWritten := 0
-		for bytesWritten < len(bytes) {
-			incBytes, _ := p.connection.Write(bytes[bytesWritten:])
-			bytesWritten += incBytes
-		}
+		randoBytes, _ := json.Marshal(rando)
+		p.writer.Write(randoBytes)
+		p.writer.Flush()
 	}
 }
 
