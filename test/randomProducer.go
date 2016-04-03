@@ -1,5 +1,5 @@
 /*
-==============
+===============
 RANDOM PRODUCER
 ===============
 Accepts a single TCP connection, keeps a map with keys of 'a' to 'z' to integers initialized to 0, and then every second, randomly generates a delta, which is broadcasted and added to the in-memory map, and prints the in-memory map
@@ -102,7 +102,13 @@ func (p *Producer) trackRandos() {
 func (p *Producer) sendRandos() {
 	for {
 		rando := <-p.randosToSend
-		randoBytes, _ := json.Marshal(rando)
+
+		stringRando := make(map[string]string)
+		for key, value := range rando {
+			stringRando[key] = strconv.Itoa(value)
+		}
+
+		randoBytes, _ := json.Marshal(stringRando)
 		p.writer.Write(randoBytes)
 		p.writer.Flush()
 	}
