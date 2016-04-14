@@ -32,6 +32,7 @@ func init() {
 	newConnections = map[*websocket.Conn]struct{}{}
 	existingConnections = map[*websocket.Conn]struct{}{}
 	upgrader = websocket.Upgrader{
+		// eventually check the origin for this
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},

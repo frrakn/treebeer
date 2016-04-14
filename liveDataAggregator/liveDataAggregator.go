@@ -47,7 +47,7 @@ func main() {
 	go promote()
 	go broadcast()
 
-	//todo(fchen): kill by os signal ad graceful shutdown
+	//todo(fchen): kill by os signal and graceful shutdown
 	forever := make(chan struct{})
 	<-forever
 }
