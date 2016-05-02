@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package proto;
+
+service ContextUpdate {
+	rpc UpdateTeam (TeamUpdate) returns (Result);
+	rpc UpdatePlayer (PlayerUpdate) returns (Result);
+	rpc UpdateGame(GameUpdate) returns (Result);
+}
+
+message TeamUpdate {
+	int32 teamid = 1;
+	int32 lcsid = 2;
+	int32 riotid = 3;
+	string name = 4;
+	string tag = 5;
+}
+
+message PlayerUpdate {
+	int32 playerid = 1;
+	int32 lcsid = 2;
+	int32 riotid = 3;
+	string name = 4;
+	int32 teamid = 5;
+}
+
+message GameUpdate {
+	int32 gameid = 1;
+	int32 lcsid = 2;
+	string riotgameid = 3;
+	string riotmatchid = 4;
+	int32 redteamid = 5;
+	int32 blueteamid = 6;
+	int64 gamestart = 7;
+	int64 gameend = 8;
+}
+
+message Result {
+	enum Status {
+		SUCCESS = 0;
+		FAIL = 1;
+	}
+	Status status = 1;
+	string detail = 2;
+}

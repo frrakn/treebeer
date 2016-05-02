@@ -1,0 +1,33 @@
+CREATE DATABASE lcs DEFAULT CHARACTER SET = utf8;
+
+USE lcs;
+
+CREATE TABLE teams (
+	teamid INTEGER AUTO_INCREMENT PRIMARY KEY,
+	lcsid INTEGER NOT NULL,
+	riotid INTEGER NOT NULL,
+	name VARCHAR(40) NOT NULL,
+	tag VARCHAR(10) NOT NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE players (
+	playerid INTEGER AUTO_INCREMENT PRIMARY KEY,
+	lcsid INTEGER NOT NULL,
+	riotid INTEGER NOT NULL,
+	name VARCHAR(40) NOT NULL,
+	teamid INTEGER NOT NULL,
+	FOREIGN KEY (`teamid`) REFERENCES teams(`teamid`)
+) ENGINE = InnoDB;
+
+CREATE TABLE games (
+	gameid INTEGER AUTO_INCREMENT PRIMARY KEY,
+	lcsid INTEGER NOT NULL,
+	riotgameid VARCHAR(40) NOT NULL,
+	riotmatchid VARCHAR(40) NOT NULL,
+	teamid_red INTEGER NOT NULL,
+	teamid_blue INTEGER NOT NULL,
+	gamestart BIGINT NOT NULL,
+	gameend BIGINT DEFAULT NULL,
+	FOREIGN KEY (`teamid_red`) REFERENCES teams(`teamid`),
+	FOREIGN KEY (`teamid_blue`) REFERENCES teams(`teamid`)
+) ENGINE = InnoDB;
