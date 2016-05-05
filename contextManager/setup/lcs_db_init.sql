@@ -24,10 +24,10 @@ CREATE TABLE games (
 	lcsid INTEGER NOT NULL,
 	riotgameid VARCHAR(40) NOT NULL,
 	riotmatchid VARCHAR(40) NOT NULL,
-	teamid_red INTEGER NOT NULL,
-	teamid_blue INTEGER NOT NULL,
+	redteamid INTEGER NOT NULL,
+	blueteamid INTEGER NOT NULL,
 	gamestart BIGINT NOT NULL,
 	gameend BIGINT DEFAULT NULL,
-	FOREIGN KEY (`teamid_red`) REFERENCES teams(`teamid`),
-	FOREIGN KEY (`teamid_blue`) REFERENCES teams(`teamid`)
+	FOREIGN KEY (`redteamid`) REFERENCES teams(`teamid`),
+	FOREIGN KEY (`blueteamid`) REFERENCES teams(`teamid`)
 ) ENGINE = InnoDB;

@@ -3,12 +3,15 @@ syntax = "proto3";
 package proto;
 
 service ContextUpdate {
-	rpc UpdateTeam (TeamUpdate) returns (Result);
-	rpc UpdatePlayer (PlayerUpdate) returns (Result);
-	rpc UpdateGame(GameUpdate) returns (Result);
+	rpc CreateTeam (Team) returns (Result) {}
+	rpc UpdateTeam (Team) returns (Result) {}
+	rpc CreatePlayer (Player) returns (Result) {}
+	rpc UpdatePlayer (Player) returns (Result) {}
+	rpc CreateGame (Game) returns (Result) {}
+	rpc UpdateGame (Game) returns (Result) {}
 }
 
-message TeamUpdate {
+message Team {
 	int32 teamid = 1;
 	int32 lcsid = 2;
 	int32 riotid = 3;
@@ -16,7 +19,7 @@ message TeamUpdate {
 	string tag = 5;
 }
 
-message PlayerUpdate {
+message Player {
 	int32 playerid = 1;
 	int32 lcsid = 2;
 	int32 riotid = 3;
@@ -24,7 +27,7 @@ message PlayerUpdate {
 	int32 teamid = 5;
 }
 
-message GameUpdate {
+message Game {
 	int32 gameid = 1;
 	int32 lcsid = 2;
 	string riotgameid = 3;
