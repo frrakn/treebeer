@@ -6,6 +6,7 @@ import (
 )
 
 // Transact wraps transactional db functions that begins and commits / rollbacks transactions
+// Also auto-updates versioning
 func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 	tx, err := db.Beginx()
 	if err != nil {
@@ -13,13 +14,19 @@ func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 		return
 	}
 
+	err = action(tx)
+	if err != nil {
+		err = errors.Trace(err)
+		return
+	}
+
 	defer func() {
-		if pnc := recover(); pnc != nil {
-			switch pnc := pnc.(type) {
+		if p := recover(); p != nil {
+			switch p := p.(type) {
 			case error:
-				err = errors.Trace(pnc)
+				err = errors.Trace(p)
 			default:
-				err = errors.Errorf("%s", pnc)
+				err = errors.Errorf("%s", p)
 			}
 		}
 
@@ -30,5 +37,15 @@ func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 
 		err = tx.Commit()
 	}()
-	return action(tx)
+
+	return updateTimestamp(tx)
+}
+
+func updateTimestamp(tx *sqlx.Tx) (err error) {
+	_, err = tx.Exec(`
+		INSERT INTO updates
+		VALUES ()
+	`)
+
+	return err
 }

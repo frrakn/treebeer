@@ -1,6 +1,11 @@
 package db
 
-import "github.com/jmoiron/sqlx"
+import (
+	"fmt"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/juju/errors"
+)
 
 type GameID int32
 
@@ -15,12 +20,33 @@ type Game struct {
 	GameEnd     int64
 }
 
+func CreateGames(tx *sqlx.Tx, games []*Game) error {
+	for _, game := range games {
+		id, err := game.Create(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to create game with id %d", id))
+		}
+	}
+
+	return nil
+}
+
+func UpdateGames(tx *sqlx.Tx, games []*Game) error {
+	for _, game := range games {
+		err := game.Update(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to update game with id %d", game.GameId))
+		}
+	}
+
+	return nil
+}
+
 func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {
 	res, err := tx.Exec(`
 		INSERT INTO games
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
 		`,
-		g.GameId,
 		g.LcsId,
 		g.RiotGameId,
 		g.RiotMatchId,

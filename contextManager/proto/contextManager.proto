@@ -9,6 +9,7 @@ service ContextUpdate {
 	rpc UpdatePlayer (Player) returns (Result) {}
 	rpc CreateGame (Game) returns (Result) {}
 	rpc UpdateGame (Game) returns (Result) {}
+	rpc BatchUpdate (BatchUpdates) returns (Result) {}
 }
 
 message Team {
@@ -19,12 +20,20 @@ message Team {
 	string tag = 5;
 }
 
+message Teams {
+	repeated Team teams = 1;
+}
+
 message Player {
 	int32 playerid = 1;
 	int32 lcsid = 2;
 	int32 riotid = 3;
 	string name = 4;
 	int32 teamid = 5;
+}
+
+message Players {
+	repeated Player players = 1;
 }
 
 message Game {
@@ -36,6 +45,19 @@ message Game {
 	int32 blueteamid = 6;
 	int64 gamestart = 7;
 	int64 gameend = 8;
+}
+
+message Games {
+	repeated Game games = 1;
+}
+
+message BatchUpdates {
+	Teams teamsCreate = 1;
+	Teams teamsUpdate = 2;
+	Players playersCreate = 3;
+	Players playersUpdate = 4;
+	Games gamesCreate = 5;
+	Games gamesUpdate = 6;
 }
 
 message Result {

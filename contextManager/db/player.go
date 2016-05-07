@@ -1,6 +1,11 @@
 package db
 
-import "github.com/jmoiron/sqlx"
+import (
+	"fmt"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/juju/errors"
+)
 
 type PlayerID int32
 
@@ -12,12 +17,33 @@ type Player struct {
 	TeamId   TeamID
 }
 
+func CreatePlayers(tx *sqlx.Tx, players []*Player) error {
+	for _, player := range players {
+		id, err := player.Create(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to create player with id %d", id))
+		}
+	}
+
+	return nil
+}
+
+func UpdatePlayers(tx *sqlx.Tx, players []*Player) error {
+	for _, player := range players {
+		err := player.Update(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to update player with id %d", player.PlayerId))
+		}
+	}
+
+	return nil
+}
+
 func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
 	res, err := tx.Exec(`
 		INSERT INTO players
-		VALUES (?, ?, ?, ?, ?)
+		VALUES (NULL, ?, ?, ?, ?)
 		`,
-		p.PlayerId,
 		p.LcsId,
 		p.RiotId,
 		p.Name,

@@ -1,6 +1,11 @@
 package db
 
-import "github.com/jmoiron/sqlx"
+import (
+	"fmt"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/juju/errors"
+)
 
 type TeamID int32
 
@@ -12,12 +17,33 @@ type Team struct {
 	Tag    string
 }
 
+func CreateTeams(tx *sqlx.Tx, teams []*Team) error {
+	for _, team := range teams {
+		id, err := team.Create(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to create team with id %d", id))
+		}
+	}
+
+	return nil
+}
+
+func UpdateTeams(tx *sqlx.Tx, teams []*Team) error {
+	for _, team := range teams {
+		err := team.Update(tx)
+		if err != nil {
+			return errors.Annotate(err, fmt.Sprintf("Unable to update team with id %d", team.TeamId))
+		}
+	}
+
+	return nil
+}
+
 func (t *Team) Create(tx *sqlx.Tx) (TeamID, error) {
 	res, err := tx.Exec(`
 		INSERT INTO teams
-		VALUES (?, ?, ?, ?, ?)
+		VALUES (NULL, ?, ?, ?, ?)
 		`,
-		t.TeamId,
 		t.LcsId,
 		t.RiotId,
 		t.Name,
