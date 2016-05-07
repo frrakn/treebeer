@@ -67,7 +67,7 @@ type Team struct {
 	Tag    string `protobuf:"bytes,5,opt,name=tag" json:"tag,omitempty"`
 }
 
-fteamunc (m *Team) Reset()                    { *m = Team{} }
+func (m *Team) Reset()                    { *m = Team{} }
 func (m *Team) String() string            { return proto1.CompactTextString(m) }
 func (*Team) ProtoMessage()               {}
 func (*Team) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
