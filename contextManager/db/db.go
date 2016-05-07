@@ -41,10 +41,26 @@ func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 	return updateTimestamp(tx)
 }
 
-func updateTimestamp(tx *sqlx.Tx) (err error) {
-	_, err = tx.Exec(`
+func updateTimestamp(tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
 		INSERT INTO updates
 		VALUES ()
+	`)
+
+	return err
+}
+
+func UnsafeFkCheck(tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		SET FOREIGN_KEY_CHECKS = 0
+	`)
+
+	return err
+}
+
+func SafeFkCheck(tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		SET FOREIGN_KEY_CHECKS = 1
 	`)
 
 	return err

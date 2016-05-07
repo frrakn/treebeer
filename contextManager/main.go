@@ -230,7 +230,12 @@ func (s *server) UpdateGame(ctx context.Context, game *pb.Game) (*pb.Result, err
 func (s *server) BatchUpdate(ctx context.Context, update *pb.BatchUpdates) (*pb.Result, error) {
 	batch := batchPbToDb(update)
 	err := db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
-		err := db.CreateTeams(tx, batch.teamsCreate)
+		err := db.UnsafeFkCheck(tx)
+		if err != nil {
+			return err
+		}
+
+		err = db.CreateTeams(tx, batch.teamsCreate)
 		if err != nil {
 			return err
 		}
@@ -255,7 +260,12 @@ func (s *server) BatchUpdate(ctx context.Context, update *pb.BatchUpdates) (*pb.
 			return err
 		}
 
-		return db.UpdateGames(tx, batch.gamesUpdate)
+		err = db.UpdateGames(tx, batch.gamesUpdate)
+		if err != nil {
+			return err
+		}
+
+		return db.SafeFkCheck(tx)
 	})
 
 	if err != nil {
