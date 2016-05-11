@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,7 +15,7 @@ import (
 	"github.com/frrakn/treebeer/contextManager/db"
 	pb "github.com/frrakn/treebeer/contextManager/proto"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/golang/glog"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
@@ -22,8 +24,15 @@ import (
 )
 
 type configuration struct {
-	DB   string
-	Port string
+	DB       string
+	Port     string
+	Keyfiles keyfiles
+}
+
+type keyfiles struct {
+	CaCert     string
+	ClientCert string
+	ClientKey  string
 }
 
 type server struct {
@@ -43,7 +52,7 @@ func main() {
 	flag.Parse()
 
 	c := loadConfig()
-	db := initDB(c.DB)
+	db := initDB(c.DB, c.Keyfiles)
 	serveRpc(c.Port, db)
 }
 
@@ -79,7 +88,30 @@ func loadConfig() configuration {
 	return c
 }
 
-func initDB(dsn string) *sqlx.DB {
+func initDB(dsn string, keys keyfiles) *sqlx.DB {
+	rootCertPool := x509.NewCertPool()
+	pem, err := ioutil.ReadFile(keys.CaCert)
+	if err != nil {
+		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s", keys.CaCert)))
+	}
+
+	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+		handleFatal(errors.Annotate(err, "Unabe to append PEM."))
+	}
+
+	clientCert := make([]tls.Certificate, 0, 1)
+	certs, err := tls.LoadX509KeyPair(keys.ClientCert, keys.ClientKey)
+	if err != nil {
+		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)))
+	}
+	clientCert = append(clientCert, certs)
+
+	mysql.RegisterTLSConfig("treebeer", &tls.Config{
+		RootCAs:            rootCertPool,
+		Certificates:       clientCert,
+		InsecureSkipVerify: true,
+	})
+
 	db, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
 		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to connect to database at %s", dsn)))

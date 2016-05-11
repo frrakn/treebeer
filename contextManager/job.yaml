@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: contextmanager
+    labels:
+        context: manager
+spec:
+    type: LoadBalancer
+    selector:
+        context: manager
+    ports:
+    -   protocol: TCP
+        port: 9321
+        targetPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+    name: contextmanager
+spec:
+    replicas: 1
+    template:
+        metadata:
+           labels:
+               context: manager
+        spec:
+            containers:
+            - name: contextmanager
+              image: us.gcr.io/treebeer-1286/contextmanager
+              ports:
+              - containerPort: 8080
