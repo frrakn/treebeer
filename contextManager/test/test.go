@@ -41,6 +41,13 @@ func main() {
 			},
 		},
 		&pb.Games{},
+		&pb.Stats{
+			[]*pb.Stat{
+				&pb.Stat{0, "kills"},
+				&pb.Stat{1, "deaths"},
+			},
+		},
+		&pb.Stats{},
 	}
 
 	// Contact the server and print out its response.

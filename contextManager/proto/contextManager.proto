@@ -9,6 +9,8 @@ service ContextUpdate {
 	rpc UpdatePlayer (Player) returns (Result) {}
 	rpc CreateGame (Game) returns (Result) {}
 	rpc UpdateGame (Game) returns (Result) {}
+	rpc CreateStat(Stat) returns (Result) {}
+	rpc UpdateStat(Stat) returns (Result) {}
 	rpc BatchUpdate (BatchUpdates) returns (Result) {}
 }
 
@@ -51,6 +53,15 @@ message Games {
 	repeated Game games = 1;
 }
 
+message Stat {
+	int32 statid = 1;
+	string riotname = 2;
+}
+
+message Stats {
+	repeated Stat stats = 1;
+}
+
 message BatchUpdates {
 	Teams teamsCreate = 1;
 	Teams teamsUpdate = 2;
@@ -58,6 +69,8 @@ message BatchUpdates {
 	Players playersUpdate = 4;
 	Games gamesCreate = 5;
 	Games gamesUpdate = 6;
+	Stats statsCreate = 7;
+	Stats statsUpdate = 8;
 }
 
 message Result {

@@ -46,6 +46,8 @@ type batchUpdate struct {
 	playersUpdate []*db.Player
 	gamesCreate   []*db.Game
 	gamesUpdate   []*db.Game
+	statsCreate   []*db.Stat
+	statsUpdate   []*db.Stat
 }
 
 func main() {
@@ -167,6 +169,18 @@ func gamesPbToDb(games []*pb.Game) []*db.Game {
 	return gs
 }
 
+func statPbToDb(stat *pb.Stat) *db.Stat {
+	return &db.Stat{db.StatID(stat.Statid), stat.Riotname}
+}
+
+func statsPbToDb(stats []*pb.Stat) []*db.Stat {
+	ss := make([]*db.Stat, len(stats))
+	for i, stat := range stats {
+		ss[i] = statPbToDb(stat)
+	}
+	return ss
+}
+
 func batchPbToDb(batch *pb.BatchUpdates) *batchUpdate {
 	return &batchUpdate{
 		teamsPbToDb(batch.TeamsCreate.Teams),
@@ -175,6 +189,8 @@ func batchPbToDb(batch *pb.BatchUpdates) *batchUpdate {
 		playersPbToDb(batch.PlayersUpdate.Players),
 		gamesPbToDb(batch.GamesCreate.Games),
 		gamesPbToDb(batch.GamesUpdate.Games),
+		statsPbToDb(batch.StatsCreate.Stats),
+		statsPbToDb(batch.StatsUpdate.Stats),
 	}
 }
 
@@ -259,6 +275,33 @@ func (s *server) UpdateGame(ctx context.Context, game *pb.Game) (*pb.Result, err
 	return &pb.Result{pb.Result_SUCCESS, ""}, nil
 }
 
+func (s *server) CreateStat(ctx context.Context, stat *pb.Stat) (*pb.Result, error) {
+	st := statPbToDb(stat)
+	err := db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
+		_, err := st.Create(tx)
+		return err
+	})
+
+	if err != nil {
+		return &pb.Result{pb.Result_FAIL, errorString(errors.Annotate(err, fmt.Sprintf("Error creating new stat with struct %+v", stat)))}, err
+	}
+
+	return &pb.Result{pb.Result_SUCCESS, ""}, nil
+}
+
+func (s *server) UpdateStat(ctx context.Context, stat *pb.Stat) (*pb.Result, error) {
+	st := statPbToDb(stat)
+	err := db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
+		return st.Update(tx)
+	})
+
+	if err != nil {
+		return &pb.Result{pb.Result_FAIL, errorString(errors.Annotate(err, fmt.Sprintf("Error updating stat with struct %+v", stat)))}, err
+	}
+
+	return &pb.Result{pb.Result_SUCCESS, ""}, nil
+}
+
 func (s *server) BatchUpdate(ctx context.Context, update *pb.BatchUpdates) (*pb.Result, error) {
 	batch := batchPbToDb(update)
 	err := db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
@@ -293,6 +336,16 @@ func (s *server) BatchUpdate(ctx context.Context, update *pb.BatchUpdates) (*pb.
 		}
 
 		err = db.UpdateGames(tx, batch.gamesUpdate)
+		if err != nil {
+			return err
+		}
+
+		err = db.CreateStats(tx, batch.statsCreate)
+		if err != nil {
+			return err
+		}
+
+		err = db.UpdateStats(tx, batch.statsUpdate)
 		if err != nil {
 			return err
 		}
