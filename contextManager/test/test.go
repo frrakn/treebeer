@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	pb "github.com/frrakn/treebeer/contextManager/proto"
 	"golang.org/x/net/context"
@@ -12,7 +11,8 @@ import (
 
 func main() {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial("104.196.125.93:9321", grpc.WithInsecure())
+	//conn, err := grpc.Dial("104.196.125.93:9321", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -29,22 +29,22 @@ func main() {
 		&pb.Teams{},
 		&pb.Players{
 			[]*pb.Player{
-				&pb.Player{0, 1, 1, "herp", 1},
-				&pb.Player{0, 2, 2, "derp", 1},
-				&pb.Player{0, 3, 3, "doo", 2},
+			//				&pb.Player{0, 1, 1, "herp", 1},
+			//				&pb.Player{0, 2, 2, "derp", 1},
+			//				&pb.Player{0, 3, 3, "doo", 2},
 			},
 		},
 		&pb.Players{},
 		&pb.Games{
 			[]*pb.Game{
-				&pb.Game{0, 1, "a", "a", 1, 2, time.Now().Unix(), 0},
+			//				&pb.Game{0, 1, "a", "a", 1, 2, time.Now().Unix(), 0},
 			},
 		},
 		&pb.Games{},
 		&pb.Stats{
 			[]*pb.Stat{
-				&pb.Stat{0, "kills"},
-				&pb.Stat{1, "deaths"},
+			//				&pb.Stat{0, "kills"},
+			//				&pb.Stat{1, "deaths"},
 			},
 		},
 		&pb.Stats{},

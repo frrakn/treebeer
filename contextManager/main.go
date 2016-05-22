@@ -3,20 +3,19 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 
 	"google.golang.org/grpc"
 
 	"github.com/frrakn/treebeer/contextManager/db"
 	pb "github.com/frrakn/treebeer/contextManager/proto"
+	"github.com/frrakn/treebeer/util/config"
+	"github.com/frrakn/treebeer/util/handle"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/golang/glog"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 
@@ -53,58 +52,34 @@ type batchUpdate struct {
 func main() {
 	flag.Parse()
 
-	c := loadConfig()
+	var c configuration
+	err := config.LoadConfig(&c)
+	if err != nil {
+		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
+	}
 	db := initDB(c.DB, c.Keyfiles)
 	serveRpc(c.Port, db)
-}
-
-func handleFatal(err error) {
-	glog.Fatal("%s", err)
-}
-
-func handleError(err error) {
-	glog.Error("%s", err)
 }
 
 func errorString(err error) string {
 	return fmt.Sprintf("%s", err)
 }
 
-func loadConfig() configuration {
-	var c configuration
-	if len(os.Args) < 2 {
-		handleFatal(errors.Errorf("No config file specified"))
-	}
-
-	fileLoc := os.Args[1]
-	configBytes, err := ioutil.ReadFile(fileLoc)
-	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Error reading from file location %s", fileLoc)))
-	}
-
-	err = json.Unmarshal(configBytes, &c)
-	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Error parsing config json from %s into config struct", fileLoc)))
-	}
-
-	return c
-}
-
 func initDB(dsn string, keys keyfiles) *sqlx.DB {
 	rootCertPool := x509.NewCertPool()
 	pem, err := ioutil.ReadFile(keys.CaCert)
 	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s", keys.CaCert)))
+		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s", keys.CaCert)))
 	}
 
 	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-		handleFatal(errors.Annotate(err, "Unabe to append PEM."))
+		handle.Fatal(errors.Annotate(err, "Unabe to append PEM."))
 	}
 
 	clientCert := make([]tls.Certificate, 0, 1)
 	certs, err := tls.LoadX509KeyPair(keys.ClientCert, keys.ClientKey)
 	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)))
+		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)))
 	}
 	clientCert = append(clientCert, certs)
 
@@ -116,7 +91,7 @@ func initDB(dsn string, keys keyfiles) *sqlx.DB {
 
 	db, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to connect to database at %s", dsn)))
+		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to connect to database at %s", dsn)))
 	}
 
 	return db
@@ -125,7 +100,7 @@ func initDB(dsn string, keys keyfiles) *sqlx.DB {
 func serveRpc(port string, db *sqlx.DB) {
 	l, err := net.Listen("tcp", port)
 	if err != nil {
-		handleFatal(errors.Annotate(err, fmt.Sprintf("Unable to get listener on port %d", port)))
+		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to get listener on port %d", port)))
 	}
 
 	rpcserv := grpc.NewServer()
