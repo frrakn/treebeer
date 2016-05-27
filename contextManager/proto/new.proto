@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package proto;
+
+service SeasonUpdate {
+	rpc SeasonUpdate (SeasonUpdates) returns (Empty) {}
+}
+
+service LiveStatUpdate {
+	rpc GetGame (Game) returns (Empty) {}
+	rpc GetStat (Stat) returns (Empty) {}
+}
+
+message Empty {}
+
+message Team {
+	int32 lcsid = 2;
+	int32 riotid = 3;
+	string name = 4;
+	string tag = 5;
+}
+
+message Teams {
+	repeated Team teams = 1;
+}
+
+message Player {
+	int32 lcsid = 2;
+	int32 riotid = 3;
+	string name = 4;
+	int32 teamid = 5;
+}
+
+message Players {
+	repeated Player players = 1;
+}
+
+message Game {
+	int32 lcsid = 2;
+	string riotgameid = 3;
+	string riotmatchid = 4;
+	int32 redteamid = 5;
+	int32 blueteamid = 6;
+	int64 gamestart = 7;
+	int64 gameend = 8;
+}
+
+message Games {
+	repeated Game games = 1;
+}
+
+message Stat {
+	string riotname = 2;
+}
+
+message Stats {
+	repeated Stat stats = 1;
+}
+
+message SeasonUpdates {
+	Teams teamsCreate = 1;
+	Teams teamsUpdate = 2;
+	Players playersCreate = 3;
+	Players playersUpdate = 4;
+}
