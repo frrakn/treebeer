@@ -9,46 +9,37 @@ import (
 	"net/http"
 	"time"
 
+	"google.golang.org/grpc"
+
+	"github.com/frrakn/treebeer/contextUpdater/schema"
 	"github.com/frrakn/treebeer/util/config"
 	"github.com/frrakn/treebeer/util/handle"
 	"github.com/juju/errors"
+
+	ctxPb "github.com/frrakn/treebeer/contextManager/proto"
 )
 
 type configuration struct {
-	Season int32
-	Period string
-}
-
-type riotSeason struct {
-	SeasonName  string
-	SeasonSplit string
-	ProTeams    []riotTeam
-	ProPlayers  []riotPlayer
-}
-
-type riotTeam struct {
-	Id        int32
-	RiotId    int32
-	Name      string
-	ShortName string
-}
-
-type riotPlayer struct {
-	Id        int32
-	RiotId    int32
-	Name      string
-	ProTeamId int32
+	Season                int32
+	Period                string
+	ContextManagerAddress string
 }
 
 var (
 	season      int32
 	conf        configuration
 	checkPeriod time.Duration
-	address     = "http://fantasy.na.lolesports.com/en-US/api/season/%d"
+	lcsAddress  = "http://fantasy.na.lolesports.com/en-US/api/season/%d"
 )
 
 func main() {
-	initialize()
+	conn, err := grpc.Dial(conf.ContextManagerAddress, grpc.WithInsecure())
+	if err != nil {
+		handle.Fatal(errors.Annotatef(err, "Failed to connect to rpc server"))
+	}
+	defer closeConn(conn)
+
+	_ = ctxPb.NewSeasonUpdateClient(conn)
 
 	var lastRequest []byte
 
@@ -57,7 +48,7 @@ func main() {
 
 		s := getSeason()
 
-		var seasonCtx riotSeason
+		var seasonCtx schema.RiotSeason
 		b := requestSeasonData(s)
 		if bytes.Compare(b, lastRequest) != 0 {
 			seasonCtx = parseSeasonData(b)
@@ -69,7 +60,7 @@ func main() {
 	}
 }
 
-func initialize() {
+func init() {
 	flag.Parse()
 
 	err := config.LoadConfig(&conf)
@@ -83,12 +74,19 @@ func initialize() {
 	}
 }
 
+func closeConn(conn *grpc.ClientConn) {
+	err := conn.Close()
+	if err != nil {
+		handle.Fatal(errors.Trace(err))
+	}
+}
+
 func getSeason() int32 {
 	return conf.Season
 }
 
 func requestSeasonData(s int32) []byte {
-	res, err := http.Get(fmt.Sprintf(address, s))
+	res, err := http.Get(fmt.Sprintf(lcsAddress, s))
 	if err != nil {
 		handle.Error(err)
 	}
@@ -102,8 +100,8 @@ func requestSeasonData(s int32) []byte {
 	return body
 }
 
-func parseSeasonData(body []byte) riotSeason {
-	var season riotSeason
+func parseSeasonData(body []byte) schema.RiotSeason {
+	var season schema.RiotSeason
 	err := json.Unmarshal(body, &season)
 	if err != nil {
 		handle.Error(err)

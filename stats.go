@@ -6,7 +6,7 @@ type StatType interface {
 }
 
 type StatId struct {
-	gameId int32
+	gameId   int32
 	playerId int32
 	statType StatType
 }
