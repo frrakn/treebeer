@@ -11,12 +11,12 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/frrakn/treebeer/contextUpdater/schema"
+	"github.com/frrakn/treebeer/context/contextUpdater/schema"
 	"github.com/frrakn/treebeer/util/config"
 	"github.com/frrakn/treebeer/util/handle"
 	"github.com/juju/errors"
 
-	ctxPb "github.com/frrakn/treebeer/contextManager/proto"
+	ctxPb "github.com/frrakn/treebeer/context/proto"
 )
 
 type configuration struct {

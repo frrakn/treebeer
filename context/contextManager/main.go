@@ -12,8 +12,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/frrakn/treebeer/contextManager/db"
-	ctxPb "github.com/frrakn/treebeer/contextManager/proto"
+	"github.com/frrakn/treebeer/context/db"
+	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/frrakn/treebeer/util/config"
 	"github.com/frrakn/treebeer/util/handle"
 
@@ -38,22 +38,30 @@ type server struct {
 	sqldb *sqlx.DB
 }
 
+var (
+	conf       configuration
+	liveStatDB *sqlx.DB
+)
+
 func main() {
+	serveRpc(conf.Port)
+}
+
+func init() {
 	flag.Parse()
 
-	var c configuration
-	err := config.LoadConfig(&c)
+	err := config.LoadConfig(&conf)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
-	liveStatDB := initDB(c.DB, c.Keyfiles)
+	liveStatDB = initDB(conf.DB, conf.Keyfiles)
+
 	season, err := db.GetSeasonContext(liveStatDB)
+	if err != nil {
+		handle.Fatal(errors.Annotate(err, "Failed to load season data from DB"))
+	}
 
-	serveRpc(c.Port, liveStatDB)
-}
-
-func errorString(err error) string {
-	return fmt.Sprintf("%s", err)
+	fmt.Println(season)
 }
 
 func initDB(dsn string, keys keyfiles) *sqlx.DB {
@@ -88,7 +96,7 @@ func initDB(dsn string, keys keyfiles) *sqlx.DB {
 	return liveStatDB
 }
 
-func serveRpc(port string, liveStatDB *sqlx.DB) {
+func serveRpc(port string) {
 	l, err := net.Listen("tcp", port)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to get listener on port %d", port)))
