@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -17,26 +15,19 @@ type Player struct {
 	TeamId   TeamID
 }
 
-func CreatePlayers(tx *sqlx.Tx, players []*Player) error {
-	for _, player := range players {
-		id, err := player.Create(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to create player with id %d", id))
-		}
+func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
+	var players []*Player
+
+	err := tx.Select(&players, `
+		SELECT *
+		FROM players
+	`)
+
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
 
-	return nil
-}
-
-func UpdatePlayers(tx *sqlx.Tx, players []*Player) error {
-	for _, player := range players {
-		err := player.Update(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to update player with id %d", player.PlayerId))
-		}
-	}
-
-	return nil
+	return players, nil
 }
 
 func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
@@ -51,12 +42,12 @@ func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, errors.Trace(err)
 	}
 
 	id, err := res.LastInsertId()
 
-	return PlayerID(id), err
+	return PlayerID(id), errors.Trace(err)
 }
 
 func (p *Player) Update(tx *sqlx.Tx) error {
@@ -76,5 +67,5 @@ func (p *Player) Update(tx *sqlx.Tx) error {
 		p.PlayerId,
 	)
 
-	return err
+	return errors.Trace(err)
 }

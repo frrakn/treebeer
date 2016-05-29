@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/frrakn/treebeer/contextManager/db"
 	ctxPb "github.com/frrakn/treebeer/contextManager/proto"
 	"github.com/frrakn/treebeer/util/config"
 	"github.com/frrakn/treebeer/util/handle"
@@ -45,8 +46,10 @@ func main() {
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
-	db := initDB(c.DB, c.Keyfiles)
-	serveRpc(c.Port, db)
+	liveStatDB := initDB(c.DB, c.Keyfiles)
+	season, err := db.GetSeasonContext(liveStatDB)
+
+	serveRpc(c.Port, liveStatDB)
 }
 
 func errorString(err error) string {
@@ -77,22 +80,22 @@ func initDB(dsn string, keys keyfiles) *sqlx.DB {
 		InsecureSkipVerify: true,
 	})
 
-	db, err := sqlx.Connect("mysql", dsn)
+	liveStatDB, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to connect to database at %s", dsn)))
 	}
 
-	return db
+	return liveStatDB
 }
 
-func serveRpc(port string, db *sqlx.DB) {
+func serveRpc(port string, liveStatDB *sqlx.DB) {
 	l, err := net.Listen("tcp", port)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, fmt.Sprintf("Unable to get listener on port %d", port)))
 	}
 
 	rpcserv := grpc.NewServer()
-	ctxPb.RegisterSeasonUpdateServer(rpcserv, &server{db})
+	ctxPb.RegisterSeasonUpdateServer(rpcserv, &server{liveStatDB})
 	rpcserv.Serve(l)
 }
 

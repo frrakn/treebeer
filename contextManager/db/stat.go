@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -14,26 +12,19 @@ type Stat struct {
 	RiotName string
 }
 
-func CreateStats(tx *sqlx.Tx, stats []*Stat) error {
-	for _, stat := range stats {
-		id, err := stat.Create(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to create stat with id %d", id))
-		}
+func AllStats(tx *sqlx.Tx) ([]*Stat, error) {
+	var stats []*Stat
+
+	err := tx.Select(&stats, `
+		SELECT *
+		FROM stats
+	`)
+
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
 
-	return nil
-}
-
-func UpdateStats(tx *sqlx.Tx, stats []*Stat) error {
-	for _, stat := range stats {
-		err := stat.Update(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to update stat with id %d", stat.StatId))
-		}
-	}
-
-	return nil
+	return stats, nil
 }
 
 func (s *Stat) Create(tx *sqlx.Tx) (StatID, error) {
@@ -45,12 +36,12 @@ func (s *Stat) Create(tx *sqlx.Tx) (StatID, error) {
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, errors.Trace(err)
 	}
 
 	id, err := res.LastInsertId()
 
-	return StatID(id), err
+	return StatID(id), errors.Trace(err)
 }
 
 func (s *Stat) Update(tx *sqlx.Tx) error {
@@ -64,5 +55,5 @@ func (s *Stat) Update(tx *sqlx.Tx) error {
 		s.StatId,
 	)
 
-	return err
+	return errors.Trace(err)
 }

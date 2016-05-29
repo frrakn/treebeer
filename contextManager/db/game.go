@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -20,26 +18,19 @@ type Game struct {
 	GameEnd     int64
 }
 
-func CreateGames(tx *sqlx.Tx, games []*Game) error {
-	for _, game := range games {
-		id, err := game.Create(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to create game with id %d", id))
-		}
+func AllGames(tx *sqlx.Tx) ([]*Game, error) {
+	var games []*Game
+
+	err := tx.Select(&games, `
+		SELECT *
+		FROM games
+	`)
+
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
 
-	return nil
-}
-
-func UpdateGames(tx *sqlx.Tx, games []*Game) error {
-	for _, game := range games {
-		err := game.Update(tx)
-		if err != nil {
-			return errors.Annotate(err, fmt.Sprintf("Unable to update game with id %d", game.GameId))
-		}
-	}
-
-	return nil
+	return games, nil
 }
 
 func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {
@@ -57,12 +48,12 @@ func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, errors.Trace(err)
 	}
 
 	id, err := res.LastInsertId()
 
-	return GameID(id), err
+	return GameID(id), errors.Trace(err)
 }
 
 func (g *Game) Update(tx *sqlx.Tx) error {
@@ -88,5 +79,5 @@ func (g *Game) Update(tx *sqlx.Tx) error {
 		g.GameId,
 	)
 
-	return err
+	return errors.Trace(err)
 }
