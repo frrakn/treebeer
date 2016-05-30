@@ -25,6 +25,8 @@ message Player {
 	int32 riotid = 3;
 	string name = 4;
 	int32 teamid = 5;
+	string position = 6;
+	repeated string addlpos = 7;
 }
 
 message Game {

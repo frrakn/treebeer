@@ -48,7 +48,7 @@ func (s *Stat) Update(tx *sqlx.Tx) error {
 	_, err := tx.Exec(`
 		UPDATE stats
 		SET
-			riotname = ?,
+			riotname = ?
 		WHERE statid = ?
 		`,
 		s.RiotName,

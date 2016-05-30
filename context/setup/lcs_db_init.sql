@@ -16,6 +16,8 @@ CREATE TABLE players (
 	riotid INTEGER NOT NULL,
 	name VARCHAR(40) NOT NULL,
 	teamid INTEGER NOT NULL,
+	position INTEGER NOT NULL,
+	addlpos TEXT,
 	FOREIGN KEY (`teamid`) REFERENCES teams(`teamid`)
 ) ENGINE = InnoDB;
 
@@ -34,7 +36,7 @@ CREATE TABLE games (
 
 CREATE TABLE stats (
 	statid INTEGER AUTO_INCREMENT PRIMARY KEY,
-	riotname VARCHAR(40) NOT NULL,
+	riotname VARCHAR(40) NOT NULL
 ) ENGINE = InnoDB;
 
 CREATE TABLE updates (

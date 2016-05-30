@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/frrakn/treebeer/context/position"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -13,6 +14,8 @@ type Player struct {
 	RiotId   int32
 	Name     string
 	TeamId   TeamID
+	Position position.Position
+	AddlPos  string
 }
 
 func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
@@ -33,12 +36,14 @@ func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
 func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
 	res, err := tx.Exec(`
 		INSERT INTO players
-		VALUES (NULL, ?, ?, ?, ?)
+		VALUES (NULL, ?, ?, ?, ?, ?, ?)
 		`,
 		p.LcsId,
 		p.RiotId,
 		p.Name,
 		p.TeamId,
+		p.Position,
+		p.AddlPos,
 	)
 
 	if err != nil {
@@ -58,12 +63,16 @@ func (p *Player) Update(tx *sqlx.Tx) error {
 			riotid = ?,
 			name = ?,
 			teamid = ?,
+			position = ?,
+			addlpos = ?
 		WHERE playerid = ?
 		`,
 		p.LcsId,
 		p.RiotId,
 		p.Name,
 		p.TeamId,
+		p.Position,
+		p.AddlPost,
 		p.PlayerId,
 	)
 

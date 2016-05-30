@@ -19,4 +19,5 @@ type RiotPlayer struct {
 	RiotId    int32
 	Name      string
 	ProTeamId int32
+	Positions []string
 }

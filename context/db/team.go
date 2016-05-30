@@ -57,7 +57,7 @@ func (t *Team) Update(tx *sqlx.Tx) error {
 			lcsid = ?,
 			riotid = ?,
 			name = ?,
-			tag = ?,
+			tag = ?
 		WHERE teamid = ?
 		`,
 		t.LcsId,
