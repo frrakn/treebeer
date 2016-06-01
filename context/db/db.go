@@ -5,6 +5,9 @@ import (
 	"github.com/juju/errors"
 )
 
+type LcsID int32
+type RiotID int32
+
 type SeasonContext struct {
 	Players []*Player
 	Teams   []*Team

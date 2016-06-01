@@ -8,12 +8,12 @@ import (
 type GameID int32
 
 type Game struct {
-	GameId      GameID
-	LcsId       int32
-	RiotGameId  string
-	RiotMatchId string
-	RedTeamId   TeamID
-	BlueTeamId  TeamID
+	GameID      GameID
+	LcsID       LcsID
+	RiotGameID  string
+	RiotMatchID string
+	RedTeamID   TeamID
+	BlueTeamID  TeamID
 	GameStart   int64
 	GameEnd     int64
 }
@@ -34,15 +34,19 @@ func AllGames(tx *sqlx.Tx) ([]*Game, error) {
 }
 
 func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {
+	if g.GameID != 0 {
+		return 0, errors.Errorf("Game has already been created!")
+	}
+
 	res, err := tx.Exec(`
 		INSERT INTO games
 		VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
 		`,
-		g.LcsId,
-		g.RiotGameId,
-		g.RiotMatchId,
-		g.RedTeamId,
-		g.BlueTeamId,
+		g.LcsID,
+		g.RiotGameID,
+		g.RiotMatchID,
+		g.RedTeamID,
+		g.BlueTeamID,
 		g.GameStart,
 		g.GameEnd,
 	)
@@ -52,8 +56,13 @@ func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {
 	}
 
 	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, errors.Trace(err)
+	}
 
-	return GameID(id), errors.Trace(err)
+	g.GameID = GameID(id)
+
+	return g.GameID, nil
 }
 
 func (g *Game) Update(tx *sqlx.Tx) error {
@@ -69,14 +78,14 @@ func (g *Game) Update(tx *sqlx.Tx) error {
 			gameend = ?
 		WHERE gameid = ?
 		`,
-		g.LcsId,
-		g.RiotGameId,
-		g.RiotMatchId,
-		g.RedTeamId,
-		g.BlueTeamId,
+		g.LcsID,
+		g.RiotGameID,
+		g.RiotMatchID,
+		g.RedTeamID,
+		g.BlueTeamID,
 		g.GameStart,
 		g.GameEnd,
-		g.GameId,
+		g.GameID,
 	)
 
 	return errors.Trace(err)

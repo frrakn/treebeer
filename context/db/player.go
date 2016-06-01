@@ -9,11 +9,11 @@ import (
 type PlayerID int32
 
 type Player struct {
-	PlayerId PlayerID
-	LcsId    int32
-	RiotId   int32
+	PlayerID PlayerID
+	LcsID    LcsID
+	RiotID   RiotID
 	Name     string
-	TeamId   TeamID
+	TeamID   TeamID
 	Position position.Position
 	AddlPos  string
 }
@@ -34,14 +34,18 @@ func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
 }
 
 func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
+	if p.PlayerID != 0 {
+		return 0, errors.Errorf("Player has already been created!")
+	}
+
 	res, err := tx.Exec(`
 		INSERT INTO players
 		VALUES (NULL, ?, ?, ?, ?, ?, ?)
 		`,
-		p.LcsId,
-		p.RiotId,
+		p.LcsID,
+		p.RiotID,
 		p.Name,
-		p.TeamId,
+		p.TeamID,
 		p.Position,
 		p.AddlPos,
 	)
@@ -51,8 +55,13 @@ func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
 	}
 
 	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, errors.Trace(err)
+	}
 
-	return PlayerID(id), errors.Trace(err)
+	p.PlayerID = PlayerID(id)
+
+	return p.PlayerID, nil
 }
 
 func (p *Player) Update(tx *sqlx.Tx) error {
@@ -67,13 +76,13 @@ func (p *Player) Update(tx *sqlx.Tx) error {
 			addlpos = ?
 		WHERE playerid = ?
 		`,
-		p.LcsId,
-		p.RiotId,
+		p.LcsID,
+		p.RiotID,
 		p.Name,
-		p.TeamId,
+		p.TeamID,
 		p.Position,
-		p.AddlPost,
-		p.PlayerId,
+		p.AddlPos,
+		p.PlayerID,
 	)
 
 	return errors.Trace(err)

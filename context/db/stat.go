@@ -8,7 +8,7 @@ import (
 type StatID int32
 
 type Stat struct {
-	StatId   StatID
+	StatID   StatID
 	RiotName string
 }
 
@@ -28,6 +28,10 @@ func AllStats(tx *sqlx.Tx) ([]*Stat, error) {
 }
 
 func (s *Stat) Create(tx *sqlx.Tx) (StatID, error) {
+	if s.StatID != 0 {
+		return 0, errors.Errorf("Stat has already been created!")
+	}
+
 	res, err := tx.Exec(`
 		INSERT INTO stats
 		VALUES (NULL, ?)
@@ -40,8 +44,13 @@ func (s *Stat) Create(tx *sqlx.Tx) (StatID, error) {
 	}
 
 	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, errors.Trace(err)
+	}
 
-	return StatID(id), errors.Trace(err)
+	s.StatID = StatID(id)
+
+	return s.StatID, nil
 }
 
 func (s *Stat) Update(tx *sqlx.Tx) error {
@@ -52,7 +61,7 @@ func (s *Stat) Update(tx *sqlx.Tx) error {
 		WHERE statid = ?
 		`,
 		s.RiotName,
-		s.StatId,
+		s.StatID,
 	)
 
 	return errors.Trace(err)

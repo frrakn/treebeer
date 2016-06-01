@@ -8,9 +8,9 @@ import (
 type TeamID int32
 
 type Team struct {
-	TeamId TeamID
-	LcsId  int32
-	RiotId int32
+	TeamID TeamID
+	LcsID  LcsID
+	RiotID RiotID
 	Name   string
 	Tag    string
 }
@@ -31,12 +31,16 @@ func AllTeams(tx *sqlx.Tx) ([]*Team, error) {
 }
 
 func (t *Team) Create(tx *sqlx.Tx) (TeamID, error) {
+	if t.TeamID != 0 {
+		return 0, errors.Errorf("Team has already been created!")
+	}
+
 	res, err := tx.Exec(`
 		INSERT INTO teams
 		VALUES (NULL, ?, ?, ?, ?)
 		`,
-		t.LcsId,
-		t.RiotId,
+		t.LcsID,
+		t.RiotID,
 		t.Name,
 		t.Tag,
 	)
@@ -46,8 +50,13 @@ func (t *Team) Create(tx *sqlx.Tx) (TeamID, error) {
 	}
 
 	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, errors.Trace(err)
+	}
 
-	return TeamID(id), errors.Trace(err)
+	t.TeamID = TeamID(id)
+
+	return t.TeamID, nil
 }
 
 func (t *Team) Update(tx *sqlx.Tx) error {
@@ -60,11 +69,11 @@ func (t *Team) Update(tx *sqlx.Tx) error {
 			tag = ?
 		WHERE teamid = ?
 		`,
-		t.LcsId,
-		t.RiotId,
+		t.LcsID,
+		t.RiotID,
 		t.Name,
 		t.Tag,
-		t.TeamId,
+		t.TeamID,
 	)
 
 	return errors.Trace(err)
