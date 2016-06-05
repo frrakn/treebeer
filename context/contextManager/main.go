@@ -3,19 +3,15 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"sync"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/grpc"
 
+	"github.com/frrakn/treebeer/context/contextManager/manager"
 	"github.com/frrakn/treebeer/context/db"
-	"github.com/frrakn/treebeer/context/position"
 	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/frrakn/treebeer/util/config"
 	"github.com/frrakn/treebeer/util/handle"
@@ -37,35 +33,9 @@ type keyfiles struct {
 	ClientKey  string
 }
 
-type server struct {
-	sqldb   *sqlx.DB
-	players *players
-	teams   *teams
-	games   *games
-	stats   *stats
-}
-
-type players struct {
-	m map[db.LcsID]*db.Player
-	sync.RWMutex
-}
-type teams struct {
-	m map[db.LcsID]*db.Team
-	sync.RWMutex
-}
-type games struct {
-	m map[db.LcsID]*db.Game
-	sync.RWMutex
-}
-type stats struct {
-	m map[string]*db.Stat
-	sync.RWMutex
-}
-
 var (
-	empty     = &ctxPb.Empty{}
 	conf      configuration
-	ctxServer *server
+	ctxServer *manager.Server
 )
 
 func main() {
@@ -75,55 +45,20 @@ func main() {
 func init() {
 	flag.Parse()
 
-	ctxServer = &server{
-		players: &players{
-			m: make(map[db.LcsID]*db.Player),
-		},
-		teams: &teams{
-			m: make(map[db.LcsID]*db.Team),
-		},
-		games: &games{
-			m: make(map[db.LcsID]*db.Game),
-		},
-		stats: &stats{
-			m: make(map[string]*db.Stat),
-		},
-	}
+	ctxServer = manager.NewServer()
 
 	err := config.LoadConfig(&conf)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
-	ctxServer.sqldb = initDB(conf.DB, conf.Keyfiles)
+	ctxServer.SqlDB = initDB(conf.DB, conf.Keyfiles)
 
-	season, err := db.GetSeasonContext(ctxServer.sqldb)
+	season, err := db.GetSeasonContext(ctxServer.SqlDB)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load season data from DB"))
 	}
 
-	ctxServer.players.Lock()
-	for _, p := range season.Players {
-		ctxServer.players.m[p.LcsID] = p
-	}
-	ctxServer.players.Unlock()
-
-	ctxServer.teams.Lock()
-	for _, t := range season.Teams {
-		ctxServer.teams.m[t.LcsID] = t
-	}
-	ctxServer.teams.Unlock()
-
-	ctxServer.games.Lock()
-	for _, g := range season.Games {
-		ctxServer.games.m[g.LcsID] = g
-	}
-	ctxServer.games.Unlock()
-
-	ctxServer.stats.Lock()
-	for _, s := range season.Stats {
-		ctxServer.stats.m[s.RiotName] = s
-	}
-	ctxServer.stats.Unlock()
+	ctxServer.Initialize(season)
 }
 
 func initDB(dsn string, keys keyfiles) *sqlx.DB {
@@ -167,185 +102,4 @@ func serveRpc(port string) {
 	rpcserv := grpc.NewServer()
 	ctxPb.RegisterSeasonUpdateServer(rpcserv, ctxServer)
 	rpcserv.Serve(l)
-}
-
-func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates) (*ctxPb.Empty, error) {
-	createTeams, updateTeams, createPlayers, createPlayerIds, updatePlayers, updatePlayerIds, err := s.seasonUpdateDiff(updates)
-	if err != nil {
-		return empty, errors.Trace(err)
-	}
-
-	// First, write teams to db
-	err = db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
-		for _, ct := range createTeams {
-			_, err := ct.Create(tx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-		for _, ut := range updateTeams {
-			err := ut.Update(tx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		handle.Error(errors.Trace(err))
-		return empty, errors.Trace(err)
-	}
-
-	// Update teams in memory if db write was successful
-	s.teams.Lock()
-	for _, ct := range createTeams {
-		s.teams.m[ct.LcsID] = ct
-	}
-	for _, ut := range updateTeams {
-		s.teams.m[ut.LcsID] = ut
-	}
-	s.teams.Unlock()
-
-	// Set player team IDs
-	s.teams.RLock()
-	for i, p := range createPlayers {
-		p.TeamID = s.teams.m[createPlayerIds[i]].TeamID
-	}
-	for i, p := range updatePlayers {
-		p.TeamID = s.teams.m[updatePlayerIds[i]].TeamID
-	}
-	s.teams.RUnlock()
-
-	// Write players to db
-	err = db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
-		for _, cp := range createPlayers {
-			_, err := cp.Create(tx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-		for _, up := range updatePlayers {
-			err := up.Update(tx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		handle.Error(errors.Trace(err))
-		return empty, errors.Trace(err)
-	}
-
-	s.players.Lock()
-	// Update players in memory if db write was successful
-	for _, cp := range createPlayers {
-		s.players.m[cp.LcsID] = cp
-	}
-	for _, up := range updatePlayers {
-		s.players.m[up.LcsID] = up
-	}
-	s.players.Unlock()
-
-	return empty, errors.Trace(err)
-}
-
-func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*db.Team, updateTeams []*db.Team, createPlayers []*db.Player, createPlayerIds []db.LcsID, updatePlayers []*db.Player, updatePlayerIds []db.LcsID, err error) {
-	ts := updates.Teams
-	ps := updates.Players
-
-	createTeams = []*db.Team{}
-	updateTeams = []*db.Team{}
-	createPlayers = []*db.Player{}
-	createPlayerIds = []db.LcsID{}
-	updatePlayers = []*db.Player{}
-	updatePlayerIds = []db.LcsID{}
-
-	for _, t := range ts {
-		s.teams.RLock()
-		team, ok := s.teams.m[db.LcsID(t.Lcsid)]
-		s.teams.RUnlock()
-		if !ok {
-			createTeams = append(createTeams, teamPbToDb(t, 0))
-		} else if !teamPbEqualsDb(t, team) {
-			updateTeams = append(updateTeams, teamPbToDb(t, team.TeamID))
-		}
-	}
-
-	for _, p := range ps {
-		s.players.RLock()
-		player, ok := s.players.m[db.LcsID(p.Lcsid)]
-		s.players.RUnlock()
-		if !ok {
-			dbPlayer, err := playerPbToDb(p, 0)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, err
-			}
-			createPlayers = append(createPlayers, dbPlayer)
-			createPlayerIds = append(createPlayerIds, db.LcsID(p.Teamid))
-		} else {
-			equals, err := playerPbEqualsDb(p, player)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, err
-			}
-			if !equals {
-				dbPlayer, err := playerPbToDb(p, player.PlayerID)
-				if err != nil {
-					return nil, nil, nil, nil, nil, nil, err
-				}
-				updatePlayers = append(updatePlayers, dbPlayer)
-				updatePlayerIds = append(updatePlayerIds, db.LcsID(p.Teamid))
-			}
-		}
-	}
-
-	return
-}
-
-func teamPbToDb(team *ctxPb.Team, id db.TeamID) *db.Team {
-	return &db.Team{
-		TeamID: id,
-		LcsID:  db.LcsID(team.Lcsid),
-		RiotID: db.RiotID(team.Riotid),
-		Name:   team.Name,
-		Tag:    team.Tag,
-	}
-}
-
-func teamPbEqualsDb(update *ctxPb.Team, existing *db.Team) bool {
-	return int32(update.Lcsid) == int32(existing.LcsID) &&
-		int32(update.Riotid) == int32(existing.RiotID) &&
-		update.Name == existing.Name &&
-		update.Tag == existing.Tag
-}
-
-func playerPbToDb(player *ctxPb.Player, id db.PlayerID) (*db.Player, error) {
-	addlpos, err := json.Marshal(player.Addlpos)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &db.Player{
-		PlayerID: id,
-		LcsID:    db.LcsID(player.Lcsid),
-		RiotID:   db.RiotID(player.Riotid),
-		Name:     player.Name,
-		Position: position.FromString(player.Position),
-		AddlPos:  string(addlpos),
-	}, nil
-}
-
-func playerPbEqualsDb(update *ctxPb.Player, existing *db.Player) (bool, error) {
-	addlpos, err := json.Marshal(update.Addlpos)
-	if err != nil {
-		return false, errors.Trace(err)
-	}
-	return (int32(update.Lcsid) == int32(existing.LcsID) &&
-		int32(update.Riotid) == int32(existing.RiotID) &&
-		update.Name == existing.Name &&
-		int32(update.Teamid) == int32(existing.TeamID) &&
-		update.Position == existing.Position.String() &&
-		string(addlpos) == existing.AddlPos), nil
 }

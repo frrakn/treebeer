@@ -15,6 +15,10 @@ type SeasonContext struct {
 	Games   []*Game
 }
 
+const (
+	DB_STR_LEN = 15
+)
+
 func GetSeasonContext(db *sqlx.DB) (*SeasonContext, error) {
 	season := &SeasonContext{}
 
@@ -33,6 +37,16 @@ func GetSeasonContext(db *sqlx.DB) (*SeasonContext, error) {
 				return errors.Trace(err)
 			}
 
+			season.Games, err = AllGames(tx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			season.Stats, err = AllStats(tx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
 			return nil
 		},
 	)
@@ -46,6 +60,40 @@ func GetSeasonContext(db *sqlx.DB) (*SeasonContext, error) {
 
 // Transact wraps transactional db functions that begins and commits / rollbacks transactions
 // Also auto-updates versioning
+func EditTransact(db *sqlx.DB, tag string, action func(tx *sqlx.Tx) error) (err error) {
+	tx, err := db.Beginx()
+	if err != nil {
+		err = errors.Trace(err)
+		return
+	}
+
+	err = action(tx)
+	if err != nil {
+		err = errors.Trace(err)
+		return
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			switch p := p.(type) {
+			case error:
+				err = errors.Trace(p)
+			default:
+				err = errors.Errorf("%s", p)
+			}
+		}
+
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	return updateTimestamp(tx, tag)
+}
+
 func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 	tx, err := db.Beginx()
 	if err != nil {
@@ -77,14 +125,19 @@ func Transact(db *sqlx.DB, action func(tx *sqlx.Tx) error) (err error) {
 		err = tx.Commit()
 	}()
 
-	return updateTimestamp(tx)
+	return
 }
 
-func updateTimestamp(tx *sqlx.Tx) error {
+func updateTimestamp(tx *sqlx.Tx, tag string) error {
+
+	if len(tag) > DB_STR_LEN {
+		return errors.Errorf("tag is too long to insert into DB")
+	}
+
 	_, err := tx.Exec(`
-		INSERT INTO updates
-		VALUES ()
-	`)
+		INSERT INTO updates (tag)
+		VALUES (?)
+	`, tag)
 
 	return errors.Trace(err)
 }

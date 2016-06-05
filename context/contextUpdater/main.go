@@ -41,9 +41,8 @@ func main() {
 	}
 	defer closeConn(conn)
 
-	client := ctxPb.NewSeasonUpdateClient(conn)
-
 	var lastRequest []byte
+	client := ctxPb.NewSeasonUpdateClient(conn)
 
 	for {
 		time.Sleep(checkPeriod)
@@ -55,14 +54,14 @@ func main() {
 		if bytes.Compare(b, lastRequest) != 0 {
 			seasonCtx = parseSeasonData(b)
 			lastRequest = b
-		}
 
-		seasonUpdate, err := seasonCtx.ToSeasonUpdates()
-		if err != nil {
-			handle.Error(errors.Trace(err))
-			continue
+			seasonUpdate, err := seasonCtx.ToSeasonUpdates()
+			if err != nil {
+				handle.Error(errors.Trace(err))
+				continue
+			}
+			client.SeasonUpdate(context.Background(), seasonUpdate)
 		}
-		client.SeasonUpdate(context.Background(), seasonUpdate)
 	}
 }
 
