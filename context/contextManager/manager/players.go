@@ -51,3 +51,19 @@ func (p *players) batchUpdate(players []*db.Player) {
 	}
 	p.Unlock()
 }
+
+func (p *players) batchUpdateWithID(players []*playerAndTeamID) {
+	p.Lock()
+	for _, pWithID := range players {
+		player := pWithID.Player
+		p.m[player.LcsID] = player
+	}
+	p.Unlock()
+}
+
+func (p *players) get(id db.LcsID) (player *db.Player, ok bool) {
+	p.RLock()
+	player, ok = p.m[id]
+	p.RUnlock()
+	return
+}
