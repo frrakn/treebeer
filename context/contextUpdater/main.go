@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"google.golang.org/grpc"
 
 	"github.com/frrakn/treebeer/context/contextUpdater/schema"
@@ -39,7 +41,7 @@ func main() {
 	}
 	defer closeConn(conn)
 
-	_ = ctxPb.NewSeasonUpdateClient(conn)
+	client := ctxPb.NewSeasonUpdateClient(conn)
 
 	var lastRequest []byte
 
@@ -55,8 +57,12 @@ func main() {
 			lastRequest = b
 		}
 
-		// TODO(fchen): convert to messages and make RPC call to ContextManager
-		fmt.Println(seasonCtx)
+		seasonUpdate, err := seasonCtx.ToSeasonUpdates()
+		if err != nil {
+			handle.Error(errors.Trace(err))
+			continue
+		}
+		client.SeasonUpdate(context.Background(), seasonUpdate)
 	}
 }
 

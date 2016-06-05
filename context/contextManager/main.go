@@ -75,7 +75,7 @@ func main() {
 func init() {
 	flag.Parse()
 
-	ctxServer := &server{
+	ctxServer = &server{
 		players: &players{
 			m: make(map[db.LcsID]*db.Player),
 		},
@@ -170,7 +170,7 @@ func serveRpc(port string) {
 }
 
 func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates) (*ctxPb.Empty, error) {
-	createTeams, updateTeams, createPlayers, updatePlayers, err := s.seasonUpdateDiff(updates)
+	createTeams, updateTeams, createPlayers, createPlayerIds, updatePlayers, updatePlayerIds, err := s.seasonUpdateDiff(updates)
 	if err != nil {
 		return empty, errors.Trace(err)
 	}
@@ -198,21 +198,24 @@ func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 	}
 
 	// Update teams in memory if db write was successful
-	s.teams.Unlock()
+	s.teams.Lock()
 	for _, ct := range createTeams {
 		s.teams.m[ct.LcsID] = ct
 	}
 	for _, ut := range updateTeams {
 		s.teams.m[ut.LcsID] = ut
 	}
-	s.teams.Lock()
+	s.teams.Unlock()
 
 	// Set player team IDs
-	s.teams.RUnlock()
-	for id, p := range createPlayers {
-		p.TeamID = s.teams.m[id].TeamID
-	}
 	s.teams.RLock()
+	for i, p := range createPlayers {
+		p.TeamID = s.teams.m[createPlayerIds[i]].TeamID
+	}
+	for i, p := range updatePlayers {
+		p.TeamID = s.teams.m[updatePlayerIds[i]].TeamID
+	}
+	s.teams.RUnlock()
 
 	// Write players to db
 	err = db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
@@ -249,14 +252,16 @@ func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 	return empty, errors.Trace(err)
 }
 
-func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*db.Team, updateTeams []*db.Team, createPlayers map[db.LcsID]*db.Player, updatePlayers []*db.Player, err error) {
+func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*db.Team, updateTeams []*db.Team, createPlayers []*db.Player, createPlayerIds []db.LcsID, updatePlayers []*db.Player, updatePlayerIds []db.LcsID, err error) {
 	ts := updates.Teams
 	ps := updates.Players
 
 	createTeams = []*db.Team{}
 	updateTeams = []*db.Team{}
-	createPlayers = make(map[db.LcsID]*db.Player)
+	createPlayers = []*db.Player{}
+	createPlayerIds = []db.LcsID{}
 	updatePlayers = []*db.Player{}
+	updatePlayerIds = []db.LcsID{}
 
 	for _, t := range ts {
 		s.teams.RLock()
@@ -276,20 +281,22 @@ func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*
 		if !ok {
 			dbPlayer, err := playerPbToDb(p, 0)
 			if err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, err
 			}
-			createPlayers[db.LcsID(p.Lcsid)] = dbPlayer
+			createPlayers = append(createPlayers, dbPlayer)
+			createPlayerIds = append(createPlayerIds, db.LcsID(p.Teamid))
 		} else {
 			equals, err := playerPbEqualsDb(p, player)
 			if err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, err
 			}
 			if !equals {
 				dbPlayer, err := playerPbToDb(p, player.PlayerID)
 				if err != nil {
-					return nil, nil, nil, nil, err
+					return nil, nil, nil, nil, nil, nil, err
 				}
 				updatePlayers = append(updatePlayers, dbPlayer)
+				updatePlayerIds = append(updatePlayerIds, db.LcsID(p.Teamid))
 			}
 		}
 	}
