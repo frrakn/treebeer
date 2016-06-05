@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"sync"
 
 	"golang.org/x/net/context"
 
@@ -38,10 +39,27 @@ type keyfiles struct {
 
 type server struct {
 	sqldb   *sqlx.DB
-	players map[db.LcsID]*db.Player
-	teams   map[db.LcsID]*db.Team
-	games   map[db.LcsID]*db.Game
-	stats   map[string]*db.Stat
+	players *players
+	teams   *teams
+	games   *games
+	stats   *stats
+}
+
+type players struct {
+	m map[db.LcsID]*db.Player
+	sync.RWMutex
+}
+type teams struct {
+	m map[db.LcsID]*db.Team
+	sync.RWMutex
+}
+type games struct {
+	m map[db.LcsID]*db.Game
+	sync.RWMutex
+}
+type stats struct {
+	m map[string]*db.Stat
+	sync.RWMutex
 }
 
 var (
@@ -57,7 +75,20 @@ func main() {
 func init() {
 	flag.Parse()
 
-	ctxServer := &server{}
+	ctxServer := &server{
+		players: &players{
+			m: make(map[db.LcsID]*db.Player),
+		},
+		teams: &teams{
+			m: make(map[db.LcsID]*db.Team),
+		},
+		games: &games{
+			m: make(map[db.LcsID]*db.Game),
+		},
+		stats: &stats{
+			m: make(map[string]*db.Stat),
+		},
+	}
 
 	err := config.LoadConfig(&conf)
 	if err != nil {
@@ -70,25 +101,29 @@ func init() {
 		handle.Fatal(errors.Annotate(err, "Failed to load season data from DB"))
 	}
 
-	ctxServer.players = make(map[db.LcsID]*db.Player)
+	ctxServer.players.Lock()
 	for _, p := range season.Players {
-		ctxServer.players[p.LcsID] = p
+		ctxServer.players.m[p.LcsID] = p
 	}
+	ctxServer.players.Unlock()
 
-	ctxServer.teams = make(map[db.LcsID]*db.Team)
+	ctxServer.teams.Lock()
 	for _, t := range season.Teams {
-		ctxServer.teams[t.LcsID] = t
+		ctxServer.teams.m[t.LcsID] = t
 	}
+	ctxServer.teams.Unlock()
 
-	ctxServer.games = make(map[db.LcsID]*db.Game)
+	ctxServer.games.Lock()
 	for _, g := range season.Games {
-		ctxServer.games[g.LcsID] = g
+		ctxServer.games.m[g.LcsID] = g
 	}
+	ctxServer.games.Unlock()
 
-	ctxServer.stats = make(map[string]*db.Stat)
+	ctxServer.stats.Lock()
 	for _, s := range season.Stats {
-		ctxServer.stats[s.RiotName] = s
+		ctxServer.stats.m[s.RiotName] = s
 	}
+	ctxServer.stats.Unlock()
 }
 
 func initDB(dsn string, keys keyfiles) *sqlx.DB {
@@ -163,17 +198,21 @@ func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 	}
 
 	// Update teams in memory if db write was successful
+	s.teams.Unlock()
 	for _, ct := range createTeams {
-		s.teams[ct.LcsID] = ct
+		s.teams.m[ct.LcsID] = ct
 	}
 	for _, ut := range updateTeams {
-		s.teams[ut.LcsID] = ut
+		s.teams.m[ut.LcsID] = ut
 	}
+	s.teams.Lock()
 
 	// Set player team IDs
+	s.teams.RUnlock()
 	for id, p := range createPlayers {
-		p.TeamID = s.teams[id].TeamID
+		p.TeamID = s.teams.m[id].TeamID
 	}
+	s.teams.RLock()
 
 	// Write players to db
 	err = db.Transact(s.sqldb, func(tx *sqlx.Tx) error {
@@ -197,13 +236,15 @@ func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 		return empty, errors.Trace(err)
 	}
 
+	s.players.Lock()
 	// Update players in memory if db write was successful
 	for _, cp := range createPlayers {
-		s.players[cp.LcsID] = cp
+		s.players.m[cp.LcsID] = cp
 	}
 	for _, up := range updatePlayers {
-		s.players[up.LcsID] = up
+		s.players.m[up.LcsID] = up
 	}
+	s.players.Unlock()
 
 	return empty, errors.Trace(err)
 }
@@ -218,7 +259,9 @@ func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*
 	updatePlayers = []*db.Player{}
 
 	for _, t := range ts {
-		team, ok := s.teams[db.LcsID(t.Lcsid)]
+		s.teams.RLock()
+		team, ok := s.teams.m[db.LcsID(t.Lcsid)]
+		s.teams.RUnlock()
 		if !ok {
 			createTeams = append(createTeams, teamPbToDb(t, 0))
 		} else if !teamPbEqualsDb(t, team) {
@@ -227,7 +270,9 @@ func (s *server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (createTeams []*
 	}
 
 	for _, p := range ps {
-		player, ok := s.players[db.LcsID(p.Lcsid)]
+		s.players.RLock()
+		player, ok := s.players.m[db.LcsID(p.Lcsid)]
+		s.players.RUnlock()
 		if !ok {
 			dbPlayer, err := playerPbToDb(p, 0)
 			if err != nil {
