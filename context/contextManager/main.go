@@ -169,6 +169,19 @@ func (s *server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 		return nil
 	})
 
+	for _, ct := range createTeams {
+		s.teams[ct.LcsID] = ct
+	}
+	for _, ut := range updateTeams {
+		s.teams[ut.LcsID] = ut
+	}
+	for _, cp := range createPlayers {
+		s.players[cp.LcsID] = cp
+	}
+	for _, up := range updatePlayers {
+		s.players[up.LcsID] = up
+	}
+
 	return empty, errors.Trace(err)
 }
 
