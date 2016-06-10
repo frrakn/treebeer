@@ -86,6 +86,13 @@ func (s *Server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 					return errors.Trace(err)
 				}
 			}
+			// TODO(frrakn): this should really be a batchupdate and the version update should ocur withing the db package...
+			if len(tDiff.create) > 0 || len(tDiff.update) > 0 {
+				err := db.UpdateVersion(tx, db.TeamTable)
+				if err != nil {
+					return errors.Trace(err)
+				}
+			}
 
 			return nil
 		})
@@ -118,6 +125,14 @@ func (s *Server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 			}
 			for _, up := range pDiff.update {
 				err := up.Update(tx)
+				if err != nil {
+					return errors.Trace(err)
+				}
+			}
+
+			// TODO(frrakn): this should really be a batchupdate and the version update should ocur withing the db package...
+			if len(pDiff.create) > 0 || len(pDiff.update) > 0 {
+				err := db.UpdateVersion(tx, db.PlayerTable)
 				if err != nil {
 					return errors.Trace(err)
 				}

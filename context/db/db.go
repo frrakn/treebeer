@@ -27,7 +27,8 @@ type Keyfiles struct {
 }
 
 const (
-	DB_STR_LEN = 15
+	DB_STR_LEN      = 15
+	INITIAL_VERSION = 1
 )
 
 func InitDB(dsn string, profile string, keys Keyfiles) (*sqlx.DB, error) {
@@ -197,6 +198,17 @@ func SafeFkCheck(tx *sqlx.Tx) error {
 	_, err := tx.Exec(`
 		SET FOREIGN_KEY_CHECKS = 1
 	`)
+
+	return errors.Trace(err)
+}
+
+func UpdateVersion(tx *sqlx.Tx, table string) error {
+	_, err := tx.Exec(`
+		INSERT INTO versions (tablename, version)
+		VALUES (?, ?)
+		ON DUPLICATE KEY
+		UPDATE version=version+1;
+	`, table, INITIAL_VERSION)
 
 	return errors.Trace(err)
 }

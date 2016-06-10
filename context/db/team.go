@@ -15,6 +15,10 @@ type Team struct {
 	Tag    string
 }
 
+const (
+	TeamTable = "teams"
+)
+
 func AllTeams(tx *sqlx.Tx) ([]*Team, error) {
 	var teams []*Team
 

@@ -18,6 +18,10 @@ type Player struct {
 	AddlPos  string
 }
 
+const (
+	PlayerTable = "games"
+)
+
 func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
 	var players []*Player
 

@@ -12,6 +12,10 @@ type Stat struct {
 	RiotName string
 }
 
+const (
+	StatTable = "stats"
+)
+
 func AllStats(tx *sqlx.Tx) ([]*Stat, error) {
 	var stats []*Stat
 

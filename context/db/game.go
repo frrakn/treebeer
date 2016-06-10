@@ -18,6 +18,10 @@ type Game struct {
 	GameEnd     int64
 }
 
+const (
+	GameTable = "games"
+)
+
 func AllGames(tx *sqlx.Tx) ([]*Game, error) {
 	var games []*Game
 
