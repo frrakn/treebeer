@@ -26,6 +26,11 @@ type Keyfiles struct {
 	ClientKey  string
 }
 
+type Version struct {
+	TableName string
+	Version   int32
+}
+
 const (
 	DB_STR_LEN      = 15
 	INITIAL_VERSION = 1
@@ -211,4 +216,23 @@ func UpdateVersion(tx *sqlx.Tx, table string) error {
 	`, table, INITIAL_VERSION)
 
 	return errors.Trace(err)
+}
+
+func GetVersions(db *sqlx.DB) (map[string]int32, error) {
+	var vs []*Version
+	err := db.Select(&vs, `
+		SELECT *
+		FROM versions
+	`)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	versions := make(map[string]int32)
+
+	for _, v := range vs {
+		versions[v.TableName] = v.Version
+	}
+
+	return versions, nil
 }
