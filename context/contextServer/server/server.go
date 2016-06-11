@@ -1,27 +1,28 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/frrakn/treebeer/context/db"
+	"github.com/frrakn/treebeer/util/handle"
 	"github.com/jmoiron/sqlx"
-	"github.com/juju/errors"
 	"github.com/julienschmidt/httprouter"
 )
 
 type Server struct {
-	SqlDB    *sqlx.DB
-	Router   *httprouter.Router
-	versions map[string]int32
-	players  *players
-	teams    *teams
-	games    *games
-	stats    *stats
+	Router  *httprouter.Router
+	poller  *DBPoller
+	players *players
+	teams   *teams
+	games   *games
+	stats   *stats
+	stop    chan struct{}
 }
 
 func NewServer(sqlDB *sqlx.DB) *Server {
 	s := &Server{
-		SqlDB:    sqlDB,
-		Router:   httprouter.New(),
-		versions: make(map[string]int32),
+		Router: httprouter.New(),
+		poller: NewDBPoller(sqlDB),
 		players: &players{
 			m: make(map[db.PlayerID]*db.Player),
 		},
@@ -34,6 +35,7 @@ func NewServer(sqlDB *sqlx.DB) *Server {
 		stats: &stats{
 			m: make(map[db.StatID]*db.Stat),
 		},
+		stop: make(chan struct{}),
 	}
 
 	s.Router.GET("/player/:id", getPlayer(s.players))
@@ -44,107 +46,31 @@ func NewServer(sqlDB *sqlx.DB) *Server {
 	return s
 }
 
-func (s *Server) Update() error {
-	currVersions, err := db.GetVersions(s.SqlDB)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	currPlayerVersion, ok := currVersions[db.PlayerTable]
-	if ok {
-		playerVersion, ok := s.versions[db.PlayerTable]
-		if !ok || currPlayerVersion != playerVersion {
-			err := s.updatePlayers()
+func (s *Server) Run(port string) {
+	go s.poller.Run()
+	go http.ListenAndServe(port, s.Router)
+	defer s.poller.Stop()
+	var (
+		season *db.SeasonContext
+		err    error
+	)
+	for {
+		select {
+		case <-s.stop:
+			return
+		case season = <-s.poller.Updates:
+			s.players.batchUpdate(season.Players)
+			s.teams.batchUpdate(season.Teams)
+			s.games.batchUpdate(season.Games)
+			s.stats.batchUpdate(season.Stats)
+		case err = <-s.poller.Errors:
 			if err != nil {
-				return errors.Trace(err)
+				handle.Error(err)
 			}
 		}
 	}
-
-	currTeamVersion, ok := currVersions[db.TeamTable]
-	if ok {
-		teamVersion, ok := s.versions[db.TeamTable]
-		if !ok || currTeamVersion != teamVersion {
-			err := s.updateTeams()
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-	}
-
-	currGameVersion, ok := currVersions[db.GameTable]
-	if ok {
-		gameVersion, ok := s.versions[db.GameTable]
-		if !ok || currGameVersion != gameVersion {
-			err := s.updateGames()
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-	}
-
-	currStatVersion, ok := currVersions[db.StatTable]
-	if ok {
-		statVersion, ok := s.versions[db.StatTable]
-		if !ok || currStatVersion != statVersion {
-			err := s.updateStats()
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-	}
-
-	return nil
 }
 
-func (s *Server) updatePlayers() error {
-	var players []*db.Player
-	err := db.Transact(s.SqlDB, func(tx *sqlx.Tx) error {
-		var err error
-		players, err = db.AllPlayers(tx)
-		return errors.Trace(err)
-	})
-
-	s.players.batchUpdate(players)
-
-	return errors.Trace(err)
-}
-
-func (s *Server) updateTeams() error {
-	var teams []*db.Team
-	err := db.Transact(s.SqlDB, func(tx *sqlx.Tx) error {
-		var err error
-		teams, err = db.AllTeams(tx)
-		return errors.Trace(err)
-	})
-
-	s.teams.batchUpdate(teams)
-
-	return errors.Trace(err)
-}
-
-func (s *Server) updateGames() error {
-	var games []*db.Game
-	err := db.Transact(s.SqlDB, func(tx *sqlx.Tx) error {
-		var err error
-		games, err = db.AllGames(tx)
-		return errors.Trace(err)
-	})
-
-	s.games.batchUpdate(games)
-
-	return errors.Trace(err)
-}
-
-func (s *Server) updateStats() error {
-	var stats []*db.Stat
-	err := db.Transact(s.SqlDB, func(tx *sqlx.Tx) error {
-		var err error
-		stats, err = db.AllStats(tx)
-		return errors.Trace(err)
-	})
-
-	s.stats.batchUpdate(stats)
-
-	return errors.Trace(err)
+func (s *Server) Stop() {
+	close(s.stop)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"time"
 
 	"github.com/frrakn/treebeer/context/contextServer/server"
@@ -30,21 +29,10 @@ var (
 )
 
 func main() {
-	go updateLoop()
-	err := http.ListenAndServe(conf.Port, ctxServer.Router)
-	if err != nil {
-		handle.Fatal(errors.Trace(err))
-	}
-}
-
-func updateLoop() {
-	for {
-		time.Sleep(checkPeriod)
-		err := ctxServer.Update()
-		if err != nil {
-			handle.Error(errors.Trace(err))
-		}
-	}
+	forever := make(chan struct{})
+	ctxServer.Run(conf.Port)
+	defer ctxServer.Stop()
+	<-forever
 }
 
 func init() {
