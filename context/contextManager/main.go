@@ -27,8 +27,8 @@ const (
 )
 
 var (
-	conf      configuration
-	ctxServer *manager.Server
+	conf       configuration
+	ctxManager *manager.Server
 )
 
 func main() {
@@ -38,24 +38,24 @@ func main() {
 func init() {
 	flag.Parse()
 
-	ctxServer = manager.NewServer()
+	ctxManager = manager.NewServer()
 
 	err := config.LoadConfig(&conf)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
 
-	ctxServer.SqlDB, err = db.InitDB(conf.DB+tlsProfile, tlsProfile, conf.Keyfiles)
+	ctxManager.SqlDB, err = db.InitDB(conf.DB+tlsProfile, tlsProfile, conf.Keyfiles)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load DB"))
 	}
 
-	season, err := db.GetSeasonContext(ctxServer.SqlDB)
+	season, err := db.GetSeasonContext(ctxManager.SqlDB)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load season data from DB"))
 	}
 
-	ctxServer.Initialize(season)
+	ctxManager.Initialize(season)
 }
 
 func serveRpc(port string) {
@@ -65,6 +65,6 @@ func serveRpc(port string) {
 	}
 
 	rpcserv := grpc.NewServer()
-	ctxPb.RegisterSeasonUpdateServer(rpcserv, ctxServer)
+	ctxPb.RegisterSeasonUpdateServer(rpcserv, ctxManager)
 	rpcserv.Serve(l)
 }

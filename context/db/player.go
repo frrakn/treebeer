@@ -19,7 +19,7 @@ type Player struct {
 }
 
 const (
-	PlayerTable = "games"
+	PlayerTable = "players"
 )
 
 func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
