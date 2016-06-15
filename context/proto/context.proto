@@ -11,6 +11,10 @@ service LiveStatUpdate {
 	rpc GetStat (Stat) returns (Empty) {}
 }
 
+service SeasonContext {
+	rpc GetContext(Empty) returns (FullContext) {}
+}
+
 message Empty {}
 
 message Team {
@@ -43,7 +47,34 @@ message Stat {
 	string riotname = 2;
 }
 
+message SavedTeam {
+	Team team = 1;
+	int32 teamid = 2;
+}
+
+message SavedPlayer {
+	Player player = 1;
+	int32 playerid = 2;
+}
+
+message SavedGame {
+	Game game = 1;
+	int32 gameid = 2;
+}
+
+message SavedStat {
+	Stat stat = 1;
+	int32 statid = 2;
+}
+
 message SeasonUpdates {
 	repeated Team teams = 1;
 	repeated Player players = 2;
+}
+
+message FullContext {
+	repeated SavedTeam teams = 1;
+	repeated SavedPlayer players = 2;
+	repeated SavedGame games = 3;
+	repeated SavedStat stats = 4;
 }

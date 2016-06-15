@@ -1,6 +1,7 @@
 package db
 
 import (
+	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -29,6 +30,15 @@ func AllStats(tx *sqlx.Tx) ([]*Stat, error) {
 	}
 
 	return stats, nil
+}
+
+func (s *Stat) ToPB() *ctxPb.SavedStat {
+	return &ctxPb.SavedStat{
+		Stat: &ctxPb.Stat{
+			Riotname: s.RiotName,
+		},
+		Statid: int32(s.StatID),
+	}
 }
 
 func (s *Stat) Create(tx *sqlx.Tx) (StatID, error) {
