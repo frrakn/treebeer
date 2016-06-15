@@ -16,7 +16,12 @@ type players struct {
 }
 
 func playerPbToDb(player *ctxPb.Player, id db.PlayerID) (*db.Player, error) {
-	addlpos, err := json.Marshal(player.Addlpos)
+	addlpos := make([]position.Position, len(player.Addlpos))
+	for i, pos := range player.Addlpos {
+		addlpos[i] = position.FromString(pos)
+	}
+
+	addlposJSON, err := json.Marshal(addlpos)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -27,21 +32,27 @@ func playerPbToDb(player *ctxPb.Player, id db.PlayerID) (*db.Player, error) {
 		RiotID:   db.RiotID(player.Riotid),
 		Name:     player.Name,
 		Position: position.FromString(player.Position),
-		AddlPos:  string(addlpos),
+		AddlPos:  string(addlposJSON),
 	}, nil
 }
 
 func playerPbEqualsDb(update *ctxPb.Player, existing *db.Player) (bool, error) {
-	addlpos, err := json.Marshal(update.Addlpos)
+	addlpos := make([]position.Position, len(update.Addlpos))
+	for i, pos := range update.Addlpos {
+		addlpos[i] = position.FromString(pos)
+	}
+
+	addlposJSON, err := json.Marshal(addlpos)
 	if err != nil {
 		return false, errors.Trace(err)
 	}
+
 	return (int32(update.Lcsid) == int32(existing.LcsID) &&
 		int32(update.Riotid) == int32(existing.RiotID) &&
 		update.Name == existing.Name &&
 		int32(update.Teamid) == int32(existing.TeamID) &&
 		update.Position == existing.Position.String() &&
-		string(addlpos) == existing.AddlPos), nil
+		string(addlposJSON) == existing.AddlPos), nil
 }
 
 func (p *players) batchUpdate(players []*db.Player) {
