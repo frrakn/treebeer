@@ -1,7 +1,6 @@
 package db
 
 import (
-	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -33,19 +32,6 @@ func AllTeams(tx *sqlx.Tx) ([]*Team, error) {
 	}
 
 	return teams, nil
-}
-
-func (t *Team) ToPB() *ctxPb.SavedTeam {
-	return &ctxPb.SavedTeam{
-		Team: &ctxPb.Team{
-			Lcsid:  int32(t.LcsID),
-			Riotid: int32(t.RiotID),
-			Name:   t.Name,
-			Tag:    t.Tag,
-		},
-		Teamid: int32(t.TeamID),
-	}
-
 }
 
 func (t *Team) Create(tx *sqlx.Tx) (TeamID, error) {

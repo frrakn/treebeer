@@ -1,10 +1,7 @@
 package db
 
 import (
-	"encoding/json"
-
 	"github.com/frrakn/treebeer/context/position"
-	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -38,31 +35,6 @@ func AllPlayers(tx *sqlx.Tx) ([]*Player, error) {
 	}
 
 	return players, nil
-}
-
-func (p *Player) ToPB() (*ctxPb.SavedPlayer, error) {
-	var ap []position.Position
-	err := json.Unmarshal([]byte(p.AddlPos), &ap)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	addlpos := make([]string, len(ap))
-	for i, pos := range ap {
-		addlpos[i] = pos.String()
-	}
-
-	player := &ctxPb.SavedPlayer{
-		Player: &ctxPb.Player{
-			Lcsid:    int32(p.LcsID),
-			Riotid:   int32(p.RiotID),
-			Name:     p.Name,
-			Teamid:   int32(p.TeamID),
-			Position: p.Position.String(),
-			Addlpos:  addlpos,
-		},
-		Playerid: int32(p.PlayerID),
-	}
-	return player, nil
 }
 
 func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {

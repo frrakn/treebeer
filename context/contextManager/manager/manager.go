@@ -169,17 +169,21 @@ func (s *Server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (tDiff *teamDiff
 
 	for _, t := range ts {
 		team, ok := s.teams.get(db.LcsID(t.Lcsid))
+		dbTeam := new(db.Team)
 		if !ok {
-			tDiff.create = append(tDiff.create, teamPbToDb(t, 0))
-		} else if !teamPbEqualsDb(t, team) {
-			tDiff.update = append(tDiff.update, teamPbToDb(t, team.TeamID))
+			dbTeam.FromPB(t, 0)
+			tDiff.create = append(tDiff.create, dbTeam)
+		} else if !team.EqualsPB(t) {
+			dbTeam.FromPB(t, team.TeamID)
+			tDiff.update = append(tDiff.update, dbTeam)
 		}
 	}
 
 	for _, p := range ps {
 		player, ok := s.players.get(db.LcsID(p.Lcsid))
 		if !ok {
-			dbPlayer, err := playerPbToDb(p, 0)
+			dbPlayer := new(db.Player)
+			err := dbPlayer.FromPB(p, 0)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
@@ -188,12 +192,13 @@ func (s *Server) seasonUpdateDiff(updates *ctxPb.SeasonUpdates) (tDiff *teamDiff
 				Player:    dbPlayer,
 			})
 		} else {
-			equals, err := playerPbEqualsDb(p, player)
+			equals, err := player.EqualsPB(p)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
 			if !equals {
-				dbPlayer, err := playerPbToDb(p, player.PlayerID)
+				dbPlayer := new(db.Player)
+				err := dbPlayer.FromPB(p, player.PlayerID)
 				if err != nil {
 					return nil, nil, errors.Trace(err)
 				}
