@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/frrakn/treebeer/context/db"
+	"github.com/frrakn/treebeer/context/poller"
 	"github.com/frrakn/treebeer/util/handle"
 	"github.com/jmoiron/sqlx"
 	"github.com/julienschmidt/httprouter"
@@ -11,7 +12,7 @@ import (
 
 type Server struct {
 	Router  *httprouter.Router
-	poller  *DBPoller
+	poller  *poller.DBPoller
 	players *players
 	teams   *teams
 	games   *games
@@ -22,7 +23,7 @@ type Server struct {
 func NewServer(sqlDB *sqlx.DB) *Server {
 	s := &Server{
 		Router: httprouter.New(),
-		poller: NewDBPoller(sqlDB),
+		poller: poller.NewDBPoller(sqlDB),
 		players: &players{
 			m: make(map[db.PlayerID]*db.Player),
 		},

@@ -48,6 +48,7 @@ func (p *Player) FromPB(player *ctxPb.Player, id PlayerID) error {
 	p.LcsID = LcsID(player.Lcsid)
 	p.RiotID = RiotID(player.Riotid)
 	p.Name = player.Name
+	p.TeamID = TeamID(player.Teamid)
 	p.Position = position.FromString(player.Position)
 	p.AddlPos = string(addlposJSON)
 

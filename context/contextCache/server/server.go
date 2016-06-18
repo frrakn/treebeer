@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/frrakn/treebeer/context/db"
+	"github.com/frrakn/treebeer/context/poller"
 	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/frrakn/treebeer/util/handle"
 	"github.com/jmoiron/sqlx"
@@ -14,7 +15,7 @@ import (
 )
 
 type Server struct {
-	poller  *DBPoller
+	poller  *poller.DBPoller
 	players *players
 	teams   *teams
 	games   *games
@@ -24,7 +25,7 @@ type Server struct {
 
 func NewServer(sqlDB *sqlx.DB) *Server {
 	s := &Server{
-		poller: NewDBPoller(sqlDB),
+		poller: poller.NewDBPoller(sqlDB),
 		players: &players{
 			m: make(map[db.PlayerID]*db.Player),
 		},

@@ -8,7 +8,9 @@ import (
 )
 
 type Poller struct {
+	// TODO(fchen): this should really not be returning db.SeasonContext but something more along the lines of a protobuf... our services shouldn't be speaking in db layer language but rather protobuf. Should be a global change
 	getUpdates func() (*db.SeasonContext, error)
+	onClose    func()
 	interval   *interval
 	stop       chan struct{}
 	Updates    chan *db.SeasonContext
@@ -27,6 +29,9 @@ const (
 func NewPoller(updates func() (*db.SeasonContext, error)) *Poller {
 	return &Poller{
 		getUpdates: updates,
+		onClose: func() {
+			return
+		},
 		interval: &interval{
 			t: DEFAULT_INTERVAL,
 		},
@@ -38,6 +43,10 @@ func NewPoller(updates func() (*db.SeasonContext, error)) *Poller {
 
 func (p *Poller) SetInterval(t time.Duration) {
 	p.interval.set(t)
+}
+
+func (p *Poller) SetClose(close func()) {
+	p.onClose = close
 }
 
 func (p *Poller) Run() {
@@ -56,6 +65,7 @@ func (p *Poller) Run() {
 }
 
 func (p *Poller) Stop() {
+	p.onClose()
 	close(p.stop)
 	close(p.Updates)
 }

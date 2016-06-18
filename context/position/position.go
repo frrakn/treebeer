@@ -14,15 +14,15 @@ const (
 func (p Position) String() string {
 	switch p {
 	case TOP:
-		return "Top"
+		return "TOP_LANE"
 	case JUNGLE:
-		return "Jungle"
+		return "JUNGLE"
 	case MID:
-		return "Mid"
+		return "MID_LANE"
 	case ADCARRY:
-		return "AD Carry"
+		return "AD_CARRY"
 	case SUPPORT:
-		return "Support"
+		return "SUPPORT"
 	default:
 		return "Unsupported position type"
 	}

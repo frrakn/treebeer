@@ -1,14 +1,13 @@
-package server
+package poller
 
 import (
 	"github.com/frrakn/treebeer/context/db"
-	"github.com/frrakn/treebeer/context/poller"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
 
 type DBPoller struct {
-	*poller.Poller
+	*Poller
 	SqlDB    *sqlx.DB
 	versions map[string]int32
 }
@@ -19,7 +18,7 @@ func NewDBPoller(sqlDB *sqlx.DB) *DBPoller {
 		versions: make(map[string]int32),
 	}
 
-	p.Poller = poller.NewPoller(
+	p.Poller = NewPoller(
 		func() (*db.SeasonContext, error) {
 			season := &db.SeasonContext{}
 			currVersions, err := db.GetVersions(p.SqlDB)

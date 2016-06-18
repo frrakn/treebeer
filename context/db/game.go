@@ -1,7 +1,6 @@
 package db
 
 import (
-	ctxPb "github.com/frrakn/treebeer/context/proto"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -36,21 +35,6 @@ func AllGames(tx *sqlx.Tx) ([]*Game, error) {
 	}
 
 	return games, nil
-}
-
-func (g *Game) ToPB() *ctxPb.SavedGame {
-	return &ctxPb.SavedGame{
-		Game: &ctxPb.Game{
-			Lcsid:       int32(g.LcsID),
-			Riotgameid:  g.RiotGameID,
-			Riotmatchid: g.RiotMatchID,
-			Redteamid:   int32(g.RedTeamID),
-			Blueteamid:  int32(g.BlueTeamID),
-			Gamestart:   g.GameStart,
-			Gameend:     g.GameEnd,
-		},
-		Gameid: int32(g.GameID),
-	}
 }
 
 func (g *Game) Create(tx *sqlx.Tx) (GameID, error) {

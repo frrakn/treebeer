@@ -2,7 +2,11 @@ package main
 
 import (
 	"flag"
+	"os"
+	"os/signal"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/frrakn/treebeer/context/contextCache/server"
 	"github.com/frrakn/treebeer/context/db"
@@ -29,10 +33,13 @@ var (
 )
 
 func main() {
-	forever := make(chan struct{})
-	ctxServer.Run(conf.Port)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, unix.SIGINT, unix.SIGTERM)
+
+	go ctxServer.Run(conf.Port)
 	defer ctxServer.Stop()
-	<-forever
+
+	<-sigs
 }
 
 func init() {
