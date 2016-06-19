@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -49,8 +48,6 @@ func main() {
 	}
 	defer c.Close()
 
-	done := make(chan struct{})
-
 	/*db, err := sql.Open("mysql",
 		"root:@tcp(127.0.0.1:3306)/treebeer")
 	if err != nil {
@@ -58,8 +55,6 @@ func main() {
 	}*/
 
 	go func() {
-		defer c.Close()
-		defer close(done)
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
@@ -90,32 +85,5 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case t := <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
-		case <-interrupt:
-			log.Println("interrupt")
-			// To cleanly close a connection, a client should send a close
-			// frame and wait for the server to close the connection.
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				log.Println("write close:", err)
-				return
-			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
-			c.Close()
-			return
-		}
-	}
+	<-interrupt
 }
