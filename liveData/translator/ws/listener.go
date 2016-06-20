@@ -1,10 +1,12 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/frrakn/treebeer/liveData/translator/ws/schema"
 	"github.com/gorilla/websocket"
 	"github.com/juju/errors"
 )
@@ -54,7 +56,14 @@ func (l *Listener) Run() {
 				close(l.stop)
 				return
 			}
-			fmt.Println(string(message))
+			var liveStats schema.LiveStats
+			err = json.Unmarshal(message, &liveStats)
+			fmt.Println(err)
+			for _, game := range liveStats {
+				for _, player := range game.PlayerStats {
+					fmt.Printf("%+v\n", player)
+				}
+			}
 		}
 	}()
 
