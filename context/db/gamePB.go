@@ -1,6 +1,8 @@
 package db
 
-import ctxPb "github.com/frrakn/treebeer/context/proto"
+import (
+	ctxPb "github.com/frrakn/treebeer/context/proto"
+)
 
 func (g *Game) ToPB() *ctxPb.SavedGame {
 	return &ctxPb.SavedGame{
@@ -22,8 +24,11 @@ func (g *Game) FromPB(game *ctxPb.Game, id GameID) {
 	g.LcsID = LcsID(game.Lcsid)
 	g.RiotGameID = game.Riotgameid
 	g.RiotMatchID = game.Riotmatchid
-	g.RedTeamID = TeamID(game.Redteamid)
-	g.BlueTeamID = TeamID(game.Blueteamid)
 	g.GameStart = game.Gamestart
 	g.GameEnd = game.Gameend
+}
+
+func (g *Game) SetIDs(red TeamID, blue TeamID) {
+	g.RedTeamID = red
+	g.BlueTeamID = blue
 }

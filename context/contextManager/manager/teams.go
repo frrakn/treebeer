@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/frrakn/treebeer/context/db"
+	"github.com/juju/errors"
 )
 
 type teams struct {
@@ -26,9 +27,13 @@ func (t *teams) get(id db.LcsID) (team *db.Team, ok bool) {
 	return
 }
 
-func (t *teams) convertID(id db.LcsID) db.TeamID {
+func (t *teams) convertID(id db.LcsID) (db.TeamID, error) {
 	t.RLock()
-	teamID := t.m[id].TeamID
+	team, ok := t.m[id]
 	t.RUnlock()
-	return teamID
+	if !ok {
+		return 0, errors.Errorf("No such team exists with LCS ID %d", id)
+	}
+	teamID := team.TeamID
+	return teamID, nil
 }

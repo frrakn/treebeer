@@ -7,8 +7,8 @@ service SeasonUpdate {
 }
 
 service LiveStatUpdate {
-	rpc GetGame (Game) returns (Empty) {}
-	rpc GetStat (Stat) returns (Empty) {}
+	rpc GetGame (Game) returns (SavedGame) {}
+	rpc GetStat (Stat) returns (SavedStat) {}
 }
 
 service SeasonContext {

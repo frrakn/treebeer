@@ -18,3 +18,10 @@ func (g *games) batchUpdate(games []*db.Game) {
 	}
 	g.Unlock()
 }
+
+func (g *games) get(id db.LcsID) (game *db.Game, ok bool) {
+	g.RLock()
+	game, ok = g.m[id]
+	g.RUnlock()
+	return
+}

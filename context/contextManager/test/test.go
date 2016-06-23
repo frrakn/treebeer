@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
-	pb "github.com/frrakn/treebeer/contextManager/proto"
+	pb "github.com/frrakn/treebeer/context/proto"
+	"github.com/juju/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -17,9 +19,9 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewContextUpdateClient(conn)
+	c := pb.NewLiveStatUpdateClient(conn)
 
-	updates := &pb.BatchUpdates{
+	/*updates := &pb.BatchUpdates{
 		&pb.Teams{
 			[]*pb.Team{
 				&pb.Team{0, 1, 1, "harro", "HRO"},
@@ -48,10 +50,16 @@ func main() {
 			},
 		},
 		&pb.Stats{},
-	}
+	}*/
 
 	// Contact the server and print out its response.
-	_, err = c.BatchUpdate(context.Background(), updates)
+	game, err := c.GetGame(context.Background(), &pb.Game{1, "a", "a", 131, 147, time.Now().Unix(), 0})
 
-	fmt.Println(err)
+	fmt.Println(game)
+	fmt.Println(errors.ErrorStack(err))
+
+	stat, err := c.GetStat(context.Background(), &pb.Stat{"kills"})
+
+	fmt.Println(stat)
+	fmt.Println(errors.ErrorStack(err))
 }

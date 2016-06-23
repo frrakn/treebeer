@@ -66,5 +66,6 @@ func serveRpc(port string) {
 
 	rpcserv := grpc.NewServer()
 	ctxPb.RegisterSeasonUpdateServer(rpcserv, ctxManager)
+	ctxPb.RegisterLiveStatUpdateServer(rpcserv, ctxManager)
 	rpcserv.Serve(l)
 }

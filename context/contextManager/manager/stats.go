@@ -18,3 +18,10 @@ func (s *stats) batchUpdate(stats []*db.Stat) {
 	}
 	s.Unlock()
 }
+
+func (s *stats) get(id string) (stat *db.Stat, ok bool) {
+	s.RLock()
+	stat, ok = s.m[id]
+	s.RUnlock()
+	return
+}

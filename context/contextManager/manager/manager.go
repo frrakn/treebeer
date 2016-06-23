@@ -34,7 +34,8 @@ type playerAndTeamID struct {
 }
 
 const (
-	PROCESS_TAG = "CtxMgr"
+	SEASONUPDATE_TAG   = "CtxMgr<SeasonUpdate>"
+	LIVESTATUPDATE_TAG = "CtxMgr<LiveStatUpdate>"
 )
 
 var (
@@ -65,6 +66,61 @@ func (s *Server) Initialize(update *db.SeasonContext) {
 	s.stats.batchUpdate(update.Stats)
 }
 
+func (s *Server) GetGame(ctx context.Context, game *ctxPb.Game) (*ctxPb.SavedGame, error) {
+	g, ok := s.games.get(db.LcsID(game.Lcsid))
+	if ok {
+		return g.ToPB(), nil
+	}
+
+	g = &db.Game{}
+	redID, err := s.teams.convertID(db.LcsID(game.Redteamid))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	blueID, err := s.teams.convertID(db.LcsID(game.Blueteamid))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	g.FromPB(game, 0)
+	g.SetIDs(redID, blueID)
+	err = db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Games", func(tx *sqlx.Tx) error {
+		_, err := g.Create(tx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		return db.UpdateVersion(tx, db.GameTable)
+	})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return g.ToPB(), nil
+}
+
+func (s *Server) GetStat(ctx context.Context, stat *ctxPb.Stat) (*ctxPb.SavedStat, error) {
+	st, ok := s.stats.get(stat.Riotname)
+	if ok {
+		return st.ToPB(), nil
+	}
+
+	st = &db.Stat{}
+	st.FromPB(stat, 0)
+	err := db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Stats", func(tx *sqlx.Tx) error {
+		_, err := st.Create(tx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		return db.UpdateVersion(tx, db.StatTable)
+	})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return st.ToPB(), nil
+}
+
 func (s *Server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates) (*ctxPb.Empty, error) {
 	tDiff, pDiff, err := s.seasonUpdateDiff(updates)
 	if err != nil {
@@ -73,7 +129,7 @@ func (s *Server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 
 	if len(tDiff.create) != 0 || len(tDiff.update) != 0 {
 		// First, write teams to db
-		err = db.EditTransact(s.SqlDB, PROCESS_TAG+" Teams", func(tx *sqlx.Tx) error {
+		err = db.EditTransact(s.SqlDB, SEASONUPDATE_TAG+" Teams", func(tx *sqlx.Tx) error {
 			for _, ct := range tDiff.create {
 				_, err := ct.Create(tx)
 				if err != nil {
@@ -109,14 +165,20 @@ func (s *Server) SeasonUpdate(ctx context.Context, updates *ctxPb.SeasonUpdates)
 	if len(pDiff.create) != 0 || len(pDiff.update) != 0 {
 		// Set player team IDs
 		for _, p := range pDiff.create {
-			p.TeamID = s.teams.convertID(p.teamLcsID)
+			p.TeamID, err = s.teams.convertID(p.teamLcsID)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
 		}
 		for _, p := range pDiff.update {
-			p.TeamID = s.teams.convertID(p.teamLcsID)
+			p.TeamID, err = s.teams.convertID(p.teamLcsID)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
 		}
 
 		// Write players to db
-		err = db.EditTransact(s.SqlDB, PROCESS_TAG+" Players", func(tx *sqlx.Tx) error {
+		err = db.EditTransact(s.SqlDB, SEASONUPDATE_TAG+" Players", func(tx *sqlx.Tx) error {
 			for _, cp := range pDiff.create {
 				_, err := cp.Create(tx)
 				if err != nil {

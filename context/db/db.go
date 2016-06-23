@@ -32,7 +32,7 @@ type Version struct {
 }
 
 const (
-	DB_STR_LEN      = 15
+	DB_STR_LEN      = 40
 	INITIAL_VERSION = 1
 )
 
