@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	pb "github.com/frrakn/treebeer/context/proto"
 	"github.com/juju/errors"
@@ -53,9 +52,9 @@ func main() {
 	}*/
 
 	// Contact the server and print out its response.
-	game, err := c.GetGame(context.Background(), &pb.Game{1, "a", "a", 131, 147, time.Now().Unix(), 0})
+	team, err := c.GetTeam(context.Background(), &pb.Team{1, 1, "a", "a"})
 
-	fmt.Println(game)
+	fmt.Println(team)
 	fmt.Println(errors.ErrorStack(err))
 
 	stat, err := c.GetStat(context.Background(), &pb.Stat{"kills"})

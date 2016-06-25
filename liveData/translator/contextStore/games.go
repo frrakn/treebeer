@@ -11,17 +11,29 @@ type games struct {
 	sync.RWMutex
 }
 
+func newGames() *games {
+	return &games{
+		m: make(map[db.LcsID]*db.Game),
+	}
+}
+
 func (g *games) batchUpdate(games []*db.Game) {
 	g.Lock()
 	for _, game := range games {
-		g.m[game.GameID] = game
+		g.m[game.LcsID] = game
 	}
 	g.Unlock()
 }
 
-func (g *games) get(id db.GameID) (game *db.Game, ok bool) {
+func (g *games) get(id db.LcsID) (game *db.Game, ok bool) {
 	g.RLock()
 	game, ok = g.m[id]
 	g.RUnlock()
 	return
+}
+
+func (g *games) set(id db.LcsID, game *db.Game) {
+	g.RLock()
+	g.m[id] = game
+	g.RUnlock()
 }

@@ -11,17 +11,29 @@ type stats struct {
 	sync.RWMutex
 }
 
+func newStats() *stats {
+	return &stats{
+		m: make(map[string]*db.Stat),
+	}
+}
+
 func (s *stats) batchUpdate(stats []*db.Stat) {
 	s.Lock()
 	for _, stat := range stats {
-		s.m[stat.StatID] = stat
+		s.m[stat.RiotName] = stat
 	}
 	s.Unlock()
 }
 
-func (s *stats) get(id db.StatID) (stat *db.Stat, ok bool) {
+func (s *stats) get(name string) (stat *db.Stat, ok bool) {
 	s.RLock()
-	stat, ok = s.m[id]
+	stat, ok = s.m[name]
 	s.RUnlock()
 	return
+}
+
+func (s *stats) set(name string, stat *db.Stat) {
+	s.RLock()
+	s.m[name] = stat
+	s.RUnlock()
 }
