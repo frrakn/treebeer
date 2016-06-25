@@ -22,6 +22,14 @@ func (t *Team) FromPB(team *ctxPb.Team, id TeamID) {
 	t.Tag = team.Tag
 }
 
+func (t *Team) FromSavedPB(team *ctxPb.SavedTeam) {
+	t.TeamID = TeamID(team.Teamid)
+	t.LcsID = LcsID(team.Team.Lcsid)
+	t.RiotID = RiotID(team.Team.Riotid)
+	t.Name = team.Team.Name
+	t.Tag = team.Team.Tag
+}
+
 func (t *Team) EqualsPB(team *ctxPb.Team) bool {
 	return int32(team.Lcsid) == int32(t.LcsID) &&
 		int32(team.Riotid) == int32(t.RiotID) &&

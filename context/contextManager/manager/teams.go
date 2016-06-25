@@ -27,6 +27,12 @@ func (t *teams) get(id db.LcsID) (team *db.Team, ok bool) {
 	return
 }
 
+func (t *teams) set(id db.LcsID, team *db.Team) {
+	t.RLock()
+	t.m[id] = team
+	t.RUnlock()
+}
+
 func (t *teams) convertID(id db.LcsID) (db.TeamID, error) {
 	t.RLock()
 	team, ok := t.m[id]

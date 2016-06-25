@@ -7,6 +7,8 @@ service SeasonUpdate {
 }
 
 service LiveStatUpdate {
+	rpc GetPlayer (Player) returns (SavedPlayer) {}
+	rpc GetTeam (Team) returns (SavedTeam) {}
 	rpc GetGame (Game) returns (SavedGame) {}
 	rpc GetStat (Stat) returns (SavedStat) {}
 }

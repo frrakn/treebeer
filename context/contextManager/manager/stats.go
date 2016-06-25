@@ -25,3 +25,9 @@ func (s *stats) get(id string) (stat *db.Stat, ok bool) {
 	s.RUnlock()
 	return
 }
+
+func (s *stats) set(name string, stat *db.Stat) {
+	s.RLock()
+	s.m[name] = stat
+	s.RUnlock()
+}

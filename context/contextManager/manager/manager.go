@@ -66,6 +66,59 @@ func (s *Server) Initialize(update *db.SeasonContext) {
 	s.stats.batchUpdate(update.Stats)
 }
 
+func (s *Server) GetPlayer(ctx context.Context, player *ctxPb.Player) (*ctxPb.SavedPlayer, error) {
+	p, ok := s.players.get(db.LcsID(player.Lcsid))
+	if ok {
+		return p.ToPB()
+	}
+
+	p = &db.Player{}
+	teamID, err := s.teams.convertID(db.LcsID(player.Teamid))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	p.FromPB(player, 0)
+	p.SetTeamID(teamID)
+	err = db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Players", func(tx *sqlx.Tx) error {
+		_, err := p.Create(tx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		return db.UpdateVersion(tx, db.PlayerTable)
+	})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	s.players.set(p.LcsID, p)
+	return p.ToPB()
+}
+
+func (s *Server) GetTeam(ctx context.Context, team *ctxPb.Team) (*ctxPb.SavedTeam, error) {
+	t, ok := s.teams.get(db.LcsID(team.Lcsid))
+	if ok {
+		return t.ToPB(), nil
+	}
+
+	t = &db.Team{}
+	t.FromPB(team, 0)
+	err := db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Teams", func(tx *sqlx.Tx) error {
+		_, err := t.Create(tx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		return db.UpdateVersion(tx, db.TeamTable)
+	})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	s.teams.set(t.LcsID, t)
+	return t.ToPB(), nil
+}
+
 func (s *Server) GetGame(ctx context.Context, game *ctxPb.Game) (*ctxPb.SavedGame, error) {
 	g, ok := s.games.get(db.LcsID(game.Lcsid))
 	if ok {
@@ -95,6 +148,7 @@ func (s *Server) GetGame(ctx context.Context, game *ctxPb.Game) (*ctxPb.SavedGam
 		return nil, errors.Trace(err)
 	}
 
+	s.games.set(g.LcsID, g)
 	return g.ToPB(), nil
 }
 
@@ -118,6 +172,7 @@ func (s *Server) GetStat(ctx context.Context, stat *ctxPb.Stat) (*ctxPb.SavedSta
 		return nil, errors.Trace(err)
 	}
 
+	s.stats.set(st.RiotName, st)
 	return st.ToPB(), nil
 }
 

@@ -34,3 +34,9 @@ func (p *players) get(id db.LcsID) (player *db.Player, ok bool) {
 	p.RUnlock()
 	return
 }
+
+func (p *players) set(id db.LcsID, player *db.Player) {
+	p.RLock()
+	p.m[id] = player
+	p.RUnlock()
+}

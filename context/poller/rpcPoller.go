@@ -34,25 +34,28 @@ func NewRPCPoller(address string) (*RPCPoller, error) {
 			season.Players = make([]*db.Player, len(fullCtx.Players))
 			for i, player := range fullCtx.Players {
 				season.Players[i] = &db.Player{}
-				season.Players[i].FromPB(player.Player, db.PlayerID(player.Playerid))
+				err := season.Players[i].FromSavedPB(player)
+				if err != nil {
+					return nil, errors.Trace(err)
+				}
 			}
 
 			season.Teams = make([]*db.Team, len(fullCtx.Teams))
 			for i, team := range fullCtx.Teams {
 				season.Teams[i] = &db.Team{}
-				season.Teams[i].FromPB(team.Team, db.TeamID(team.Teamid))
+				season.Teams[i].FromSavedPB(team)
 			}
 
 			season.Games = make([]*db.Game, len(fullCtx.Games))
 			for i, games := range fullCtx.Games {
 				season.Games[i] = &db.Game{}
-				season.Games[i].FromPB(games.Game, db.GameID(games.Gameid))
+				season.Games[i].FromSavedPB(game)
 			}
 
 			season.Stats = make([]*db.Stat, len(fullCtx.Stats))
 			for i, stat := range fullCtx.Stats {
 				season.Stats[i] = (&db.Stat{})
-				season.Stats[i].FromPB(stat.Stat, db.StatID(stat.Statid))
+				season.Stats[i].FromSavedPB(stat)
 			}
 
 			return season, nil

@@ -15,3 +15,8 @@ func (s *Stat) FromPB(stat *ctxPb.Stat, id StatID) {
 	s.StatID = id
 	s.RiotName = stat.Riotname
 }
+
+func (s *Stat) FromSavedPB(stat *ctxPb.SavedStat) {
+	s.StatID = StatID(stat.Statid)
+	s.RiotName = stat.Stat.Riotname
+}

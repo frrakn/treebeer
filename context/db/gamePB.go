@@ -24,8 +24,21 @@ func (g *Game) FromPB(game *ctxPb.Game, id GameID) {
 	g.LcsID = LcsID(game.Lcsid)
 	g.RiotGameID = game.Riotgameid
 	g.RiotMatchID = game.Riotmatchid
+	// RedTeamID foreign key omitted for internal translation
+	// BlueTeamID foreign key omitted for internal translation
 	g.GameStart = game.Gamestart
 	g.GameEnd = game.Gameend
+}
+
+func (g *Game) FromSavedPB(game *ctxPb.SavedGame) {
+	g.GameID = GameID(game.Gameid)
+	g.LcsID = LcsID(game.Game.Lcsid)
+	g.RiotGameID = game.Game.Riotgameid
+	g.RiotMatchID = game.Game.Riotmatchid
+	g.RedTeamID = TeamID(game.Game.Redteamid)
+	g.BlueTeamID = TeamID(game.Game.Blueteamid)
+	g.GameStart = game.Game.Gamestart
+	g.GameEnd = game.Game.Gameend
 }
 
 func (g *Game) SetIDs(red TeamID, blue TeamID) {

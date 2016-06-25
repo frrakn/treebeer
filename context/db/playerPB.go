@@ -48,8 +48,30 @@ func (p *Player) FromPB(player *ctxPb.Player, id PlayerID) error {
 	p.LcsID = LcsID(player.Lcsid)
 	p.RiotID = RiotID(player.Riotid)
 	p.Name = player.Name
-	p.TeamID = TeamID(player.Teamid)
+	// TeamID foreign key omitted for internal translation
 	p.Position = position.FromString(player.Position)
+	p.AddlPos = string(addlposJSON)
+
+	return nil
+}
+
+func (p *Player) FromSavedPB(player *ctxPb.SavedPlayer) error {
+	addlpos := make([]position.Position, len(player.Player.Addlpos))
+	for i, pos := range player.Player.Addlpos {
+		addlpos[i] = position.FromString(pos)
+	}
+
+	addlposJSON, err := json.Marshal(addlpos)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	p.PlayerID = PlayerID(player.Playerid)
+	p.LcsID = LcsID(player.Player.Lcsid)
+	p.RiotID = RiotID(player.Player.Riotid)
+	p.Name = player.Player.Name
+	p.TeamID = TeamID(player.Player.Teamid)
+	p.Position = position.FromString(player.Player.Position)
 	p.AddlPos = string(addlposJSON)
 
 	return nil
@@ -72,4 +94,8 @@ func (p *Player) EqualsPB(player *ctxPb.Player) (bool, error) {
 		int32(player.Teamid) == int32(p.TeamID) &&
 		player.Position == p.Position.String() &&
 		string(addlposJSON) == p.AddlPos), nil
+}
+
+func (p *Player) SetTeamID(team TeamID) {
+	p.TeamID = team
 }
