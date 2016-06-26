@@ -47,7 +47,7 @@ func NewRPCPoller(address string) (*RPCPoller, error) {
 			}
 
 			season.Games = make([]*db.Game, len(fullCtx.Games))
-			for i, games := range fullCtx.Games {
+			for i, game := range fullCtx.Games {
 				season.Games[i] = &db.Game{}
 				season.Games[i].FromSavedPB(game)
 			}

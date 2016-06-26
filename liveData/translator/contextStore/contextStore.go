@@ -2,7 +2,10 @@ package contextStore
 
 import (
 	"github.com/frrakn/treebeer/context/db"
+	"github.com/frrakn/treebeer/context/poller"
+	pb "github.com/frrakn/treebeer/context/proto"
 	"github.com/juju/errors"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -12,8 +15,8 @@ type ContextStore struct {
 	games   *games
 	stats   *stats
 
-	poller    *RPCPoller
-	ctxClient *pb.LiveStatUpdateClient
+	poller    *poller.RPCPoller
+	ctxClient pb.LiveStatUpdateClient
 
 	config Configuration
 	ready  chan struct{}
@@ -26,7 +29,7 @@ type Configuration struct {
 	ctxMgrAddr string
 }
 
-func NewContextStore(cfg Configuration) (*ContextStore, error) {
+func NewContextStore(cfg Configuration) *ContextStore {
 	return &ContextStore{
 		players: newPlayers(),
 		teams:   newTeams(),
@@ -41,11 +44,11 @@ func NewContextStore(cfg Configuration) (*ContextStore, error) {
 
 func (c *ContextStore) Start() {
 	go c.Run()
-	<-ready
+	<-c.ready
 }
 
 func (c *ContextStore) Run() {
-	poller, err := NewRPCPoller(c.config.pollerAddr)
+	poller, err := poller.NewRPCPoller(c.config.pollerAddr)
 	if err != nil {
 		c.Errors <- errors.Trace(err)
 		c.Stop()
@@ -69,7 +72,7 @@ func (c *ContextStore) Run() {
 		select {
 		case <-c.stop:
 			return
-		case season = <-c.poller.Updates:
+		case season := <-c.poller.Updates:
 			c.players.batchUpdate(season.Players)
 			c.teams.batchUpdate(season.Teams)
 			c.games.batchUpdate(season.Games)
@@ -90,19 +93,48 @@ func (c *ContextStore) Stop() {
 	close(c.stop)
 }
 
-func (c *ContextStore) convertPlayer(id db.LcsID) db.PlayerID {
-	player, ok := p.players.get(id)
+func (c *ContextStore) ConvertPlayer(id db.LcsID) (db.PlayerID, error) {
+	player, ok := c.players.get(id)
+	if ok {
+		return player.PlayerID, nil
+	}
 
+	return 0, errors.Errorf("Unable to translate player with ID: %d", id)
 }
 
-func (c *ContextStore) convertTeam(id db.LcsID) db.TeamID {
+func (c *ContextStore) convertTeam(id db.LcsID) (db.TeamID, error) {
+	team, ok := c.teams.get(id)
+	if ok {
+		return team.TeamID, nil
+	}
 
+	return 0, errors.Errorf("Unable to translate team with ID: %d", id)
 }
 
-func (c *ContextStore) convertGame(id db.LcsID) db.GameID {
+func (c *ContextStore) convertGame(g *pb.Game) (db.GameID, error) {
+	game, ok := c.games.get(db.LcsID(g.Lcsid))
+	if ok {
+		return game.GameID, nil
+	}
 
+	sgame, err := c.ctxClient.GetGame(context.Background(), g)
+	if err != nil {
+		return 0, errors.Errorf("Unable to translate game: %s", g)
+	}
+
+	return db.GameID(sgame.Gameid), nil
 }
 
-func (c *ContextStore) convertStat(name string) db.StatID {
+func (c *ContextStore) convertStat(s *pb.Stat) (db.StatID, error) {
+	stat, ok := c.stats.get(s.Riotname)
+	if ok {
+		return stat.StatID, nil
+	}
 
+	sStat, err := c.ctxClient.GetStat(context.Background(), s)
+	if err != nil {
+		return 0, errors.Errorf("Unable to translate stat: %s", s)
+	}
+
+	return db.StatID(sStat.Statid), nil
 }
