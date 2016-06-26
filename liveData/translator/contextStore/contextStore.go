@@ -18,18 +18,20 @@ type ContextStore struct {
 	poller    *poller.RPCPoller
 	ctxClient pb.LiveStatUpdateClient
 
-	config Configuration
+	conn *grpc.ClientConn
+
+	config *Configuration
 	ready  chan struct{}
 	stop   chan struct{}
 	Errors chan error
 }
 
 type Configuration struct {
-	pollerAddr string
-	ctxMgrAddr string
+	RPCPollAddr string
+	CtxMgrAddr  string
 }
 
-func NewContextStore(cfg Configuration) *ContextStore {
+func New(cfg *Configuration) *ContextStore {
 	return &ContextStore{
 		players: newPlayers(),
 		teams:   newTeams(),
@@ -44,28 +46,29 @@ func NewContextStore(cfg Configuration) *ContextStore {
 
 func (c *ContextStore) Start() {
 	go c.Run()
+	// TODO(frrakn): This makes process hang if ready is never received... stuck listening for ContextCache
 	<-c.ready
 }
 
 func (c *ContextStore) Run() {
-	poller, err := poller.NewRPCPoller(c.config.pollerAddr)
+	var err error
+	c.poller, err = poller.NewRPCPoller(c.config.RPCPollAddr)
 	if err != nil {
 		c.Errors <- errors.Trace(err)
 		c.Stop()
 		return
 	}
 
-	poller.Run()
+	go c.poller.Run()
 
-	conn, err := grpc.Dial(c.config.ctxMgrAddr)
-	defer conn.Close()
+	c.conn, err = grpc.Dial(c.config.CtxMgrAddr, grpc.WithInsecure())
 	if err != nil {
 		c.Errors <- errors.Trace(err)
 		c.Stop()
 		return
 	}
 
-	c.ctxClient = pb.NewLiveStatUpdateClient(conn)
+	c.ctxClient = pb.NewLiveStatUpdateClient(c.conn)
 
 	firstUpdate := true
 	for {
@@ -79,6 +82,7 @@ func (c *ContextStore) Run() {
 			c.stats.batchUpdate(season.Stats)
 			if firstUpdate {
 				close(c.ready)
+				firstUpdate = false
 			}
 		case err = <-c.poller.Errors:
 			if err != nil {
@@ -89,6 +93,7 @@ func (c *ContextStore) Run() {
 }
 
 func (c *ContextStore) Stop() {
+	c.conn.Close()
 	c.poller.Stop()
 	close(c.stop)
 }

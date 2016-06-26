@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -17,15 +16,23 @@ type Listener struct {
 	opts    map[string]string
 
 	Errors chan error
+	Stats  chan *schema.LiveStats
 	stop   chan struct{}
 }
 
-func NewListener(address string, path string, opts map[string]string) *Listener {
+type Configuration struct {
+	Address string
+	Path    string
+	Opts    map[string]string
+}
+
+func NewListener(cfg *Configuration) *Listener {
 	return &Listener{
-		address: address,
-		path:    path,
-		opts:    opts,
+		address: cfg.Address,
+		path:    cfg.Path,
+		opts:    cfg.Opts,
 		Errors:  make(chan error),
+		Stats:   make(chan *schema.LiveStats),
 		stop:    make(chan struct{}),
 	}
 }
@@ -53,17 +60,15 @@ func (l *Listener) Run() {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				l.Errors <- errors.Trace(err)
-				close(l.stop)
 				return
 			}
 			var liveStats schema.LiveStats
 			err = json.Unmarshal(message, &liveStats)
-			fmt.Println(err)
-			for _, game := range liveStats {
-				for _, player := range game.PlayerStats {
-					fmt.Printf("%+v\n", player)
-				}
+			if err != nil {
+				l.Errors <- errors.Trace(err)
+				break
 			}
+			l.Stats <- &liveStats
 		}
 	}()
 

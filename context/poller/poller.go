@@ -61,6 +61,7 @@ func (p *Poller) Run() {
 		}
 	}()
 
+	//TODO (fchen): wut... I should establish a standard interface for daemons
 	<-p.stop
 }
 
