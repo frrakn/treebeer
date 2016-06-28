@@ -28,8 +28,8 @@ CREATE TABLE games (
 	riotmatchid VARCHAR(40) NOT NULL,
 	redteamid INTEGER NOT NULL,
 	blueteamid INTEGER NOT NULL,
-	gamestart BIGINT NOT NULL,
-	gameend BIGINT DEFAULT NULL,
+	gamestart DATETIME NOT NULL,
+	gameend DATETIME DEFAULT NULL,
 	FOREIGN KEY (`redteamid`) REFERENCES teams(`teamid`),
 	FOREIGN KEY (`blueteamid`) REFERENCES teams(`teamid`)
 ) ENGINE = InnoDB;

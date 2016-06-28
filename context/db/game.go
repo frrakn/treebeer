@@ -1,6 +1,8 @@
 package db
 
 import (
+	"time"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -14,8 +16,8 @@ type Game struct {
 	RiotMatchID string
 	RedTeamID   TeamID
 	BlueTeamID  TeamID
-	GameStart   int64
-	GameEnd     int64
+	GameStart   time.Time
+	GameEnd     time.Time
 }
 
 const (

@@ -1,7 +1,5 @@
 package schema
 
-type LiveStats map[string]*Game
-
 type Game struct {
 	TeamStats     map[string]*Team
 	PlayerStats   map[string]*Player

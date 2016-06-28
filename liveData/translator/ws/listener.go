@@ -16,7 +16,7 @@ type Listener struct {
 	opts    map[string]string
 
 	Errors chan error
-	Stats  chan *schema.LiveStats
+	Stats  chan map[string]*schema.Game
 	stop   chan struct{}
 }
 
@@ -32,7 +32,7 @@ func NewListener(cfg *Configuration) *Listener {
 		path:    cfg.Path,
 		opts:    cfg.Opts,
 		Errors:  make(chan error),
-		Stats:   make(chan *schema.LiveStats),
+		Stats:   make(chan map[string]*schema.Game),
 		stop:    make(chan struct{}),
 	}
 }
@@ -62,13 +62,13 @@ func (l *Listener) Run() {
 				l.Errors <- errors.Trace(err)
 				return
 			}
-			var liveStats schema.LiveStats
+			var liveStats map[string]*schema.Game
 			err = json.Unmarshal(message, &liveStats)
 			if err != nil {
 				l.Errors <- errors.Trace(err)
 				break
 			}
-			l.Stats <- &liveStats
+			l.Stats <- liveStats
 		}
 	}()
 

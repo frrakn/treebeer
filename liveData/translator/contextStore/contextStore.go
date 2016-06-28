@@ -98,7 +98,7 @@ func (c *ContextStore) Stop() {
 	close(c.stop)
 }
 
-func (c *ContextStore) ConvertPlayer(id db.LcsID) (db.PlayerID, error) {
+func (c *ContextStore) ConvertPlayer(id db.RiotID) (db.PlayerID, error) {
 	player, ok := c.players.get(id)
 	if ok {
 		return player.PlayerID, nil
@@ -107,7 +107,16 @@ func (c *ContextStore) ConvertPlayer(id db.LcsID) (db.PlayerID, error) {
 	return 0, errors.Errorf("Unable to translate player with ID: %d", id)
 }
 
-func (c *ContextStore) convertTeam(id db.LcsID) (db.TeamID, error) {
+func (c *ContextStore) GetTeamForPlayer(id db.RiotID) (db.TeamID, error) {
+	player, ok := c.players.get(id)
+	if !ok {
+		return 0, errors.Errorf("Unable to translate player with ID: %d", id)
+	}
+
+	return player.TeamID, nil
+}
+
+func (c *ContextStore) ConvertTeam(id db.RiotID) (db.TeamID, error) {
 	team, ok := c.teams.get(id)
 	if ok {
 		return team.TeamID, nil
@@ -116,9 +125,9 @@ func (c *ContextStore) convertTeam(id db.LcsID) (db.TeamID, error) {
 	return 0, errors.Errorf("Unable to translate team with ID: %d", id)
 }
 
-func (c *ContextStore) convertGame(g *pb.Game) (db.GameID, error) {
+func (c *ContextStore) ConvertGame(g *pb.Game) (db.GameID, error) {
 	game, ok := c.games.get(db.LcsID(g.Lcsid))
-	if ok {
+	if ok && game.EqualsPB(g) {
 		return game.GameID, nil
 	}
 
@@ -130,7 +139,7 @@ func (c *ContextStore) convertGame(g *pb.Game) (db.GameID, error) {
 	return db.GameID(sgame.Gameid), nil
 }
 
-func (c *ContextStore) convertStat(s *pb.Stat) (db.StatID, error) {
+func (c *ContextStore) ConvertStat(s *pb.Stat) (db.StatID, error) {
 	stat, ok := c.stats.get(s.Riotname)
 	if ok {
 		return stat.StatID, nil

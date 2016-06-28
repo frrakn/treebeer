@@ -121,22 +121,13 @@ func (s *Server) GetTeam(ctx context.Context, team *ctxPb.Team) (*ctxPb.SavedTea
 
 func (s *Server) GetGame(ctx context.Context, game *ctxPb.Game) (*ctxPb.SavedGame, error) {
 	g, ok := s.games.get(db.LcsID(game.Lcsid))
-	if ok {
+	if ok && g.EqualsPB(game) {
 		return g.ToPB(), nil
 	}
 
 	g = &db.Game{}
-	redID, err := s.teams.convertID(db.LcsID(game.Redteamid))
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	blueID, err := s.teams.convertID(db.LcsID(game.Blueteamid))
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
 	g.FromPB(game, 0)
-	g.SetIDs(redID, blueID)
-	err = db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Games", func(tx *sqlx.Tx) error {
+	err := db.EditTransact(s.SqlDB, LIVESTATUPDATE_TAG+" Games", func(tx *sqlx.Tx) error {
 		_, err := g.Create(tx)
 		if err != nil {
 			return errors.Trace(err)
