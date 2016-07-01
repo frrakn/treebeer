@@ -1,14 +1,14 @@
 package schema
 
 type Game struct {
-	TeamStats     map[string]*Team
-	PlayerStats   map[string]*Player
-	GameID        string
-	MatchID       string
-	GeneratedName string
-	Realm         string
-	GameComplete  bool
-	T             int32
+	TeamStats   map[string]*Team
+	PlayerStats map[string]*Player
+	GameID      string
+	MatchID     string
+	//	GeneratedName string
+	//	Realm         string
+	GameComplete bool
+	T            int32
 }
 
 type Team struct {

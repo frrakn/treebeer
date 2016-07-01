@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package liveData;
+
+message Empty {}
+
+message Stat {
+	int32 playerid = 1;
+	int32 teamid = 2;
+	int32 gameid = 3;
+	int32 statid = 4;
+	string jsonvalue = 5;
+	int32 timestamp = 6;
+}
