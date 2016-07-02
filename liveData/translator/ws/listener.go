@@ -68,7 +68,9 @@ func (l *Listener) Run() {
 				l.Errors <- errors.Trace(err)
 				break
 			}
-			l.Stats <- liveStats
+			if liveStats != nil {
+				l.Stats <- liveStats
+			}
 		}
 	}()
 

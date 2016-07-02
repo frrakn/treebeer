@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"net"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -21,9 +20,10 @@ import (
 type Server struct {
 	config *Configuration
 
-	ctxStore     *contextStore.ContextStore
-	riotListener *ws.Listener
+	ctxStore *contextStore.ContextStore
+	ids      map[string]*game
 
+	riotListener *ws.Listener
 	servListener net.Listener
 	connections  *connections
 
@@ -46,8 +46,11 @@ var (
 
 func NewServer(cfg *Configuration, ctxStore *contextStore.ContextStore, listener *ws.Listener) *Server {
 	server := &Server{
-		config:       cfg,
-		ctxStore:     ctxStore,
+		config: cfg,
+
+		ctxStore: ctxStore,
+		ids:      make(map[string]*game),
+
 		riotListener: listener,
 		connections: &connections{
 			c: make([]net.Conn, 0),
@@ -107,67 +110,101 @@ func (s *Server) handlers() {
 
 func (s *Server) handleStats(stats map[string]*schema.Game) error {
 	for gameid, game := range stats {
-		lcsid, err := strconv.Atoi(gameid)
-		if err != nil {
-			return errors.Trace(err)
+		if game == nil {
+			continue
 		}
 
-		bluePlayer, ok := game.PlayerStats["1"]
+		ids, ok := s.ids[gameid]
 		if !ok {
-			return errors.Errorf("Unexpected schema change, blue player not found")
-		}
-		bluePlayerID, err := strconv.Atoi(bluePlayer.PlayerID)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		blueTeamID, err := s.ctxStore.GetTeamForPlayer(db.RiotID(bluePlayerID))
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		redPlayer, ok := game.PlayerStats["6"]
-		if !ok {
-			return errors.Errorf("Unexpected schema change, red player not found")
-		}
-		redPlayerID, err := strconv.Atoi(redPlayer.PlayerID)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		redTeamID, err := s.ctxStore.GetTeamForPlayer(db.RiotID(redPlayerID))
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		g := &ctxPb.Game{
-			Lcsid:       int32(lcsid),
-			Riotgameid:  game.GameID,
-			Riotmatchid: game.MatchID,
-			Redteamid:   int32(redTeamID),
-			Blueteamid:  int32(blueTeamID),
-			Gamestart:   time.Now().Unix(),
-			Gameend:     MAX_TIME.Unix(),
-		}
-
-		gameID, err := s.ctxStore.ConvertGame(g)
-		timestamp := game.T
-
-		for _, team := range game.TeamStats {
-			var teamID db.TeamID
-			if team.Color == "blue" {
-				teamID = blueTeamID
-			} else {
-				teamID = redTeamID
-			}
-			teamStruct := reflect.Indirect(reflect.ValueOf(team))
-			for i := 0; i < teamStruct.NumField(); i++ {
-				statName := teamStruct.Type().Field(i).Name
-				statVal := teamStruct.Field(i).Interface()
-				statBytes, err := json.Marshal(statVal)
+			idGame := NewGame()
+			for playernum, player := range game.PlayerStats {
+				var playerStr string
+				err := json.Unmarshal(player["playerId"], &playerStr)
 				if err != nil {
 					return errors.Trace(err)
 				}
+				riotID, err := strconv.Atoi(playerStr)
+				if err != nil {
+					return errors.Trace(err)
+				}
+				playerDBID, err := s.ctxStore.ConvertPlayer(db.RiotID(riotID))
+				if err != nil {
+					return errors.Trace(err)
+				}
+				idGame.setPlayer(playernum, playerDBID)
+			}
+
+			bluePlayer, ok := game.PlayerStats["1"]
+			if !ok {
+				return errors.Errorf("Unexpected schema change, blue player not found")
+			}
+			var bluePlayerStr string
+			err := json.Unmarshal(bluePlayer["playerId"], &bluePlayerStr)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			bluePlayerID, err := strconv.Atoi(bluePlayerStr)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			blueTeamID, err := s.ctxStore.GetTeamForPlayer(db.RiotID(bluePlayerID))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			idGame.setTeam("100", blueTeamID)
+
+			redPlayer, ok := game.PlayerStats["6"]
+			if !ok {
+				return errors.Errorf("Unexpected schema change, red player not found")
+			}
+			var redPlayerStr string
+			err = json.Unmarshal(redPlayer["playerId"], &redPlayerStr)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			redPlayerID, err := strconv.Atoi(redPlayerStr)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			redTeamID, err := s.ctxStore.GetTeamForPlayer(db.RiotID(redPlayerID))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			idGame.setTeam("200", redTeamID)
+
+			lcsid, err := strconv.Atoi(gameid)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			g := &ctxPb.Game{
+				Lcsid:       int32(lcsid),
+				Riotgameid:  game.GameID,
+				Riotmatchid: game.MatchID,
+				Redteamid:   int32(redTeamID),
+				Blueteamid:  int32(blueTeamID),
+				Gamestart:   time.Now().Unix(),
+				Gameend:     MAX_TIME.Unix(),
+			}
+
+			gameDBID, err := s.ctxStore.ConvertGame(g)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			idGame.setID(gameDBID)
+			s.ids[gameid] = idGame
+			ids = idGame
+		}
+		timestamp := game.T
+
+		gameDBID := ids.getID()
+
+		for teamid, team := range game.TeamStats {
+			teamDBID, ok := ids.getTeam(teamid)
+			if !ok {
+				return errors.Errorf("Unrecognized team number %s", teamid)
+			}
+			for statName, statVal := range team {
 				statID, err := s.ctxStore.ConvertStat(
 					&ctxPb.Stat{
 						Riotname: statName,
@@ -177,10 +214,10 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 				}
 				proto := ldPb.Stat{
 					Playerid:  0,
-					Teamid:    int32(teamID),
-					Gameid:    int32(gameID),
+					Teamid:    int32(teamDBID),
+					Gameid:    int32(gameDBID),
 					Statid:    int32(statID),
-					Jsonvalue: string(statBytes),
+					Jsonvalue: string(statVal),
 					Timestamp: timestamp,
 				}
 				protoBytes, err := json.Marshal(proto)
@@ -191,19 +228,13 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 				s.broadcast(protoBytes)
 			}
 		}
-		for _, player := range game.PlayerStats {
-			playerID, err := strconv.ParseInt(player.PlayerID, 10, 32)
-			if err != nil {
-				return errors.Trace(err)
+
+		for playerid, player := range game.PlayerStats {
+			playerDBID, ok := ids.getPlayer(playerid)
+			if !ok {
+				return errors.Errorf("Unrecognized player number %s", playerid)
 			}
-			playerStruct := reflect.Indirect(reflect.ValueOf(player))
-			for i := 0; i < playerStruct.NumField(); i++ {
-				statName := playerStruct.Type().Field(i).Name
-				statVal := playerStruct.Field(i).Interface()
-				statBytes, err := json.Marshal(statVal)
-				if err != nil {
-					return errors.Trace(err)
-				}
+			for statName, statVal := range player {
 				statID, err := s.ctxStore.ConvertStat(
 					&ctxPb.Stat{
 						Riotname: statName,
@@ -212,11 +243,11 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 					return errors.Trace(err)
 				}
 				proto := ldPb.Stat{
-					Playerid:  int32(playerID),
+					Playerid:  int32(playerDBID),
 					Teamid:    0,
-					Gameid:    int32(gameID),
+					Gameid:    int32(gameDBID),
 					Statid:    int32(statID),
-					Jsonvalue: string(statBytes),
+					Jsonvalue: string(statVal),
 					Timestamp: timestamp,
 				}
 				protoBytes, err := json.Marshal(proto)
@@ -233,12 +264,14 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 }
 
 func (s *Server) acceptLoop() {
-	conn, err := s.servListener.Accept()
-	if err != nil {
-		s.Errors <- errors.Trace(err)
+	for {
+		conn, err := s.servListener.Accept()
+		if err != nil {
+			s.Errors <- errors.Trace(err)
+			continue
+		}
+		s.connections.add(conn)
 	}
-
-	s.connections.add(conn)
 }
 
 func (s *Server) broadcast(msg []byte) {
@@ -256,6 +289,7 @@ func (c *connections) add(conn net.Conn) {
 
 func (c *connections) broadcast(msg []byte) []error {
 	errs := make([]error, 0)
+	c.Lock()
 	for i, conn := range c.c {
 		writer := bufio.NewWriter(conn)
 
@@ -264,7 +298,13 @@ func (c *connections) broadcast(msg []byte) []error {
 			errs = append(errs, errors.Trace(err))
 			c.closeAndRemove(i)
 		}
+		err = writer.Flush()
+		if err != nil {
+			errs = append(errs, errors.Trace(err))
+			c.closeAndRemove(i)
+		}
 	}
+	c.Unlock()
 
 	return errs
 }

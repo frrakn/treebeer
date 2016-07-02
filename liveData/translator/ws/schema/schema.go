@@ -1,8 +1,10 @@
 package schema
 
+import "encoding/json"
+
 type Game struct {
-	TeamStats   map[string]*Team
-	PlayerStats map[string]*Player
+	TeamStats   map[string]map[string]json.RawMessage
+	PlayerStats map[string]map[string]json.RawMessage
 	GameID      string
 	MatchID     string
 	//	GeneratedName string
@@ -11,7 +13,7 @@ type Game struct {
 	T            int32
 }
 
-type Team struct {
+/* type Team struct {
 	//	TeamID           int32
 	BaronsKilled     int32
 	DragonsKilled    int32
@@ -91,4 +93,4 @@ type Rune struct {
 type Mastery struct {
 	MasteryID int32
 	Rank      int32
-}
+} */
