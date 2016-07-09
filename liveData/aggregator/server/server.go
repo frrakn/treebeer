@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -81,6 +80,7 @@ func (s *Server) run() {
 	go http.ListenAndServe(s.config.Port, s.router)
 	go s.broadcastLoop()
 	go s.promoteLoop()
+	go s.listenTCP()
 	<-s.stop
 	s.newConns.close()
 	s.existingConns.close()
@@ -94,6 +94,7 @@ func (s *Server) listenTCP() {
 	conn, err := net.Dial("tcp", s.config.Translator)
 	if err != nil {
 		s.Errors <- errors.Trace(err)
+		return
 	}
 	defer conn.Close()
 
@@ -105,7 +106,6 @@ func (s *Server) listenTCP() {
 			s.Errors <- errors.Trace(err)
 			continue
 		}
-		fmt.Println(message)
 		s.prelimAgg.AddProto(message)
 	}
 }
@@ -193,8 +193,8 @@ func (c *connections) moveTo(c2 *connections) {
 	c.Lock()
 	c2.Lock()
 	for conn, _ := range c.m {
-		c.remove(conn)
-		c2.add(conn)
+		delete(c.m, conn)
+		c2.m[conn] = struct{}{}
 	}
 	c2.Unlock()
 	c.Unlock()
