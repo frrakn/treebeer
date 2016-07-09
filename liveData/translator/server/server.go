@@ -296,12 +296,12 @@ func (c *connections) broadcast(msg []byte) []error {
 		_, err := writer.Write(msg)
 		if err != nil {
 			errs = append(errs, errors.Trace(err))
-			c.closeAndRemove(i)
+			c.unsafeCloseAndRemove(i)
 		}
 		err = writer.Flush()
 		if err != nil {
 			errs = append(errs, errors.Trace(err))
-			c.closeAndRemove(i)
+			c.unsafeCloseAndRemove(i)
 		}
 	}
 	c.Unlock()
@@ -309,13 +309,11 @@ func (c *connections) broadcast(msg []byte) []error {
 	return errs
 }
 
-func (c *connections) closeAndRemove(i int) {
-	c.Lock()
+func (c *connections) unsafeCloseAndRemove(i int) {
 	c.c[i].Close()
 	c.c[i] = c.c[len(c.c)-1]
 	c.c[len(c.c)-1] = nil
 	c.c = c.c[:len(c.c)-1]
-	c.Unlock()
 }
 
 func (c *connections) closeAll() {
