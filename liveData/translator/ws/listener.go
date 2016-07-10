@@ -42,6 +42,17 @@ func (l *Listener) Start() {
 }
 
 func (l *Listener) Run() {
+	for {
+		select {
+		case <-l.stop:
+			return
+		default:
+			l.connectAndListen()
+		}
+	}
+}
+
+func (l *Listener) connectAndListen() {
 	header := http.Header{}
 	for k, v := range l.opts {
 		header.Add(k, v)
@@ -55,8 +66,11 @@ func (l *Listener) Run() {
 	}
 	defer conn.Close()
 
-	go func() {
-		for {
+	for {
+		select {
+		case <-l.stop:
+			return
+		default:
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				l.Errors <- errors.Trace(err)
@@ -72,9 +86,7 @@ func (l *Listener) Run() {
 				l.Stats <- liveStats
 			}
 		}
-	}()
-
-	<-l.stop
+	}
 }
 
 func (l *Listener) Stop() {
