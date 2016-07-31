@@ -25,3 +25,15 @@ func (s *stats) get(id db.StatID) (stat *db.Stat, ok bool) {
 	s.RUnlock()
 	return
 }
+
+func (s *stats) getAll() []*db.Stat {
+	index := 0
+	s.RLock()
+	ss := make([]*db.Stat, len(s.m))
+	for _, stat := range s.m {
+		ss[index] = stat
+		index = index + 1
+	}
+	s.RUnlock()
+	return ss
+}

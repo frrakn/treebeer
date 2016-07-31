@@ -25,3 +25,16 @@ func (p *players) get(id db.PlayerID) (player *db.Player, ok bool) {
 	p.RUnlock()
 	return
 }
+
+func (p *players) getForTeam(id db.TeamID) []*db.Player {
+	players := make([]*db.Player, 0)
+
+	p.RLock()
+	for _, player := range p.m {
+		if player.TeamID == id {
+			players = append(players, player)
+		}
+	}
+	p.RUnlock()
+	return players
+}

@@ -43,6 +43,7 @@ func NewServer(sqlDB *sqlx.DB) *Server {
 	s.Router.GET("/team/:id", getTeam(s.teams))
 	s.Router.GET("/game/:id", getGame(s.games))
 	s.Router.GET("/stat/:id", getStat(s.stats))
+	s.Router.GET("/context/:gameid", getContext(s))
 
 	return s
 }
