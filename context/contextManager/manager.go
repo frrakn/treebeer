@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
-  "log"
+	"log"
 
 	"google.golang.org/grpc"
 
@@ -33,8 +33,8 @@ var (
 )
 
 func main() {
-  log.SetPrefix("ContextManager: ")
-  log.Print("ContextManager starting...")
+	log.SetPrefix("ContextManager: ")
+	log.Print("ContextManager starting...")
 	serveRpc(conf.Port)
 }
 
