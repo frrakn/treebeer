@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+  "log"
 
 	"golang.org/x/net/context"
 
@@ -35,6 +36,8 @@ var (
 )
 
 func main() {
+  log.SetPrefix("ContextUpdater: ")
+  log.Print("ContextUpdater starting...")
 	conn, err := grpc.Dial(conf.ContextManagerAddress, grpc.WithInsecure())
 	if err != nil {
 		handle.Fatal(errors.Annotatef(err, "Failed to connect to rpc server"))
