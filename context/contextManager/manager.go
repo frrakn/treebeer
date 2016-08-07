@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"log"
+	"net"
+	//"os"
 
 	"google.golang.org/grpc"
 
@@ -47,6 +48,12 @@ func init() {
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
+
+	//aws_err := config.LoadConfig(&conf)
+	//bc := os.Getenv("ENV")
+	//if err != nil {
+	//	handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
+	//}
 
 	ctxManager.SqlDB, err = db.InitDB(conf.DB+tlsProfile, tlsProfile, conf.Keyfiles)
 	if err != nil {

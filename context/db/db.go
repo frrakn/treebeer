@@ -1,11 +1,12 @@
 package db
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
+	//"crypto/tls"
+	//"crypto/x509"
+	//"io/ioutil"
 
-	"github.com/go-sql-driver/mysql"
+	//"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
 )
@@ -37,28 +38,28 @@ const (
 )
 
 func InitDB(dsn string, profile string, keys Keyfiles) (*sqlx.DB, error) {
-	rootCertPool := x509.NewCertPool()
-	pem, err := ioutil.ReadFile(keys.CaCert)
-	if err != nil {
-		return nil, errors.Annotatef(err, "Unable to access database credentials at %s", keys.CaCert)
-	}
+	//rootCertPool := x509.NewCertPool()
+	//pem, err := ioutil.ReadFile(keys.CaCert)
+	//if err != nil {
+	//	return nil, errors.Annotatef(err, "Unable to access database credentials at %s", keys.CaCert)
+	//}
 
-	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-		return nil, errors.Annotate(err, "Unabe to append PEM.")
-	}
+	//if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+	//	return nil, errors.Annotate(err, "Unabe to append PEM.")
+	//}
 
-	clientCert := make([]tls.Certificate, 0, 1)
-	certs, err := tls.LoadX509KeyPair(keys.ClientCert, keys.ClientKey)
-	if err != nil {
-		return nil, errors.Annotatef(err, "Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)
-	}
-	clientCert = append(clientCert, certs)
+	//clientCert := make([]tls.Certificate, 0, 1)
+	//certs, err := tls.LoadX509KeyPair(keys.ClientCert, keys.ClientKey)
+	//if err != nil {
+	//	return nil, errors.Annotatef(err, "Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)
+	//}
+	//clientCert = append(clientCert, certs)
 
-	mysql.RegisterTLSConfig(profile, &tls.Config{
-		RootCAs:            rootCertPool,
-		Certificates:       clientCert,
-		InsecureSkipVerify: true,
-	})
+	//mysql.RegisterTLSConfig(profile, &tls.Config{
+	//	RootCAs:            rootCertPool,
+	//	Certificates:       clientCert,
+	//	InsecureSkipVerify: true,
+	//})
 
 	sqldb, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
