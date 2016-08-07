@@ -1,12 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 )
-
-import "bufio"
 
 func main() {
 
@@ -23,11 +22,18 @@ func main() {
 			fmt.Println(err)
 			continue
 		}
+		decoder := json.NewDecoder(conn)
 		for {
-			message, _ := bufio.NewReader(conn).ReadString('}')
-			fmt.Println(message)
+			var message map[string]string
+			err := decoder.Decode(&message)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			bytes, err := json.Marshal(message)
 
-			if _, err = f.WriteString(message); err != nil {
+			fmt.Println(string(bytes))
+			if _, err = f.Write(bytes); err != nil {
 				fmt.Println(err)
 			}
 		}
