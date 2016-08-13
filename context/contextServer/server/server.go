@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/rs/cors"
 	"github.com/frrakn/treebeer/context/db"
 	"github.com/frrakn/treebeer/context/poller"
 	"github.com/frrakn/treebeer/util/handle"
@@ -49,8 +50,10 @@ func NewServer(sqlDB *sqlx.DB) *Server {
 }
 
 func (s *Server) Run(port string) {
+	handler := cors.Default().Handler(s.Router)
+
 	go s.poller.Run()
-	go http.ListenAndServe(port, s.Router)
+	go http.ListenAndServe(port, handler)
 	defer s.poller.Stop()
 	var (
 		season *db.SeasonContext
