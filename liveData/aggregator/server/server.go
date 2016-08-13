@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/juju/errors"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 )
 
 type Server struct {
@@ -77,7 +78,9 @@ func (s *Server) Start() {
 }
 
 func (s *Server) run() {
-	go http.ListenAndServe(s.config.Port, s.router)
+	handler := cors.Default().Handler(s.router)
+
+	go http.ListenAndServe(s.config.Port, handler)
 	go s.broadcastLoop()
 	go s.promoteLoop()
 	go s.listenTCP()
