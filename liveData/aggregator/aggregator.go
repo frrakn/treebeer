@@ -10,6 +10,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 
@@ -31,6 +32,8 @@ var (
 
 func init() {
 	flag.Parse()
+	log.SetPrefix("Aggregator: ")
+	log.Print("Aggregator initializing...")
 
 	err := config.LoadConfig(&conf)
 	if err != nil {

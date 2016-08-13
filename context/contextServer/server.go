@@ -34,8 +34,6 @@ var (
 )
 
 func main() {
-	log.SetPrefix("ContextServer: ")
-	log.Print("ContextServer starting...")
 	sigs := make(chan os.Signal)
 	signal.Notify(sigs, os.Interrupt, unix.SIGINT, unix.SIGTERM)
 
@@ -47,6 +45,8 @@ func main() {
 
 func init() {
 	flag.Parse()
+	log.SetPrefix("ContextServer: ")
+	log.Print("ContextServer starting...")
 
 	err := config.LoadConfig(&conf)
 	if err != nil {

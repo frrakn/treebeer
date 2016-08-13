@@ -34,13 +34,13 @@ var (
 )
 
 func main() {
-	log.SetPrefix("ContextManager: ")
-	log.Print("ContextManager starting...")
 	serveRpc(conf.Port)
 }
 
 func init() {
 	flag.Parse()
+	log.SetPrefix("ContextManager: ")
+	log.Print("ContextManager initializing...")
 
 	ctxManager = manager.NewServer()
 

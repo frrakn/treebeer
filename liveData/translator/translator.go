@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 
@@ -26,6 +27,8 @@ var (
 
 func init() {
 	flag.Parse()
+	log.SetPrefix("Translator: ")
+	log.Print("Translator initializing...")
 
 	err := config.LoadConfig(&conf)
 	if err != nil {

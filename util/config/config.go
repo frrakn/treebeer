@@ -13,7 +13,7 @@ func LoadConfig(c interface{}) error {
 	var fileLoc string
 	fmt.Println(os.Args)
 	if len(os.Args) < 2 {
-		fileLoc = "conf/aws.cfg"
+		fileLoc = "conf/default.cfg"
 	} else {
 		fileLoc = os.Args[1]
 	}

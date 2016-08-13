@@ -34,8 +34,6 @@ var (
 )
 
 func main() {
-	log.SetPrefix("ContextCache: ")
-	log.Print("ContextCache starting...")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, unix.SIGINT, unix.SIGTERM)
 
@@ -47,6 +45,8 @@ func main() {
 
 func init() {
 	flag.Parse()
+	log.SetPrefix("ContextCache: ")
+	log.Print("ContextCache starting...")
 
 	err := config.LoadConfig(&conf)
 	if err != nil {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-pkill updater
-pkill manager
-pkill cache
 pkill server
+pkill updater
+pkill cache
+pkill manager
