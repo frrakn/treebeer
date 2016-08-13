@@ -9,7 +9,6 @@ import (
 	"github.com/frrakn/treebeer/util/handle"
 	"github.com/jmoiron/sqlx"
 	"github.com/julienschmidt/httprouter"
-	"github.com/rs/cors"
 )
 
 type Server struct {
