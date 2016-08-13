@@ -1,11 +1,6 @@
 package db
 
 import (
-	//"crypto/tls"
-	//"crypto/x509"
-	//"io/ioutil"
-
-	//"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/juju/errors"
@@ -37,30 +32,7 @@ const (
 	INITIAL_VERSION = 1
 )
 
-func InitDB(dsn string, profile string, keys Keyfiles) (*sqlx.DB, error) {
-	//rootCertPool := x509.NewCertPool()
-	//pem, err := ioutil.ReadFile(keys.CaCert)
-	//if err != nil {
-	//	return nil, errors.Annotatef(err, "Unable to access database credentials at %s", keys.CaCert)
-	//}
-
-	//if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-	//	return nil, errors.Annotate(err, "Unabe to append PEM.")
-	//}
-
-	//clientCert := make([]tls.Certificate, 0, 1)
-	//certs, err := tls.LoadX509KeyPair(keys.ClientCert, keys.ClientKey)
-	//if err != nil {
-	//	return nil, errors.Annotatef(err, "Unable to access database credentials at %s and %s", keys.ClientCert, keys.ClientKey)
-	//}
-	//clientCert = append(clientCert, certs)
-
-	//mysql.RegisterTLSConfig(profile, &tls.Config{
-	//	RootCAs:            rootCertPool,
-	//	Certificates:       clientCert,
-	//	InsecureSkipVerify: true,
-	//})
-
+func InitDB(dsn string) (*sqlx.DB, error) {
 	sqldb, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
 		return nil, errors.Annotatef(err, "Unable to connect to database at %s", dsn)

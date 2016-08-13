@@ -55,7 +55,7 @@ func init() {
 	//	handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	//}
 
-	ctxManager.SqlDB, err = db.InitDB(conf.DB+tlsProfile, tlsProfile, conf.Keyfiles)
+	ctxManager.SqlDB, err = db.InitDB(conf.DB)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load DB"))
 	}

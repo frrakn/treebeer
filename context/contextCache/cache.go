@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 	"time"
@@ -33,6 +34,8 @@ var (
 )
 
 func main() {
+	log.SetPrefix("ContextCache: ")
+	log.Print("ContextCache starting...")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, unix.SIGINT, unix.SIGTERM)
 
@@ -50,7 +53,7 @@ func init() {
 		handle.Fatal(errors.Annotate(err, "Failed to load configuration"))
 	}
 
-	sqlDB, err := db.InitDB(conf.DB+tlsProfile, tlsProfile, conf.Keyfiles)
+	sqlDB, err := db.InitDB(conf.DB)
 	if err != nil {
 		handle.Fatal(errors.Annotate(err, "Failed to load DB"))
 	}
