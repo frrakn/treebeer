@@ -20,8 +20,9 @@ import (
 type Server struct {
 	config *Configuration
 
-	ctxStore *contextStore.ContextStore
-	ids      map[string]*game
+	ctxStore   *contextStore.ContextStore
+	ids        map[string]*game
+	ignoredIds map[string]struct{}
 
 	riotListener *ws.Listener
 	servListener net.Listener
@@ -48,8 +49,9 @@ func NewServer(cfg *Configuration, ctxStore *contextStore.ContextStore, listener
 	server := &Server{
 		config: cfg,
 
-		ctxStore: ctxStore,
-		ids:      make(map[string]*game),
+		ctxStore:   ctxStore,
+		ids:        make(map[string]*game),
+		ignoredIds: make(map[string]struct{}),
 
 		riotListener: listener,
 		connections: &connections{
@@ -114,6 +116,10 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 			continue
 		}
 
+		if _, ok := s.ignoredIds[gameid]; ok {
+			continue
+		}
+
 		ids, ok := s.ids[gameid]
 		if !ok {
 			idGame := NewGame()
@@ -125,7 +131,8 @@ func (s *Server) handleStats(stats map[string]*schema.Game) error {
 				}
 				riotID, err := strconv.Atoi(playerStr)
 				if err != nil {
-					return errors.Trace(err)
+					s.ignoredIds[gameid] = struct{}{}
+					return errors.Maskf(err, "Non-integer playerID received, adding %d to ignore list", gameid)
 				}
 				playerDBID, err := s.ctxStore.ConvertPlayer(db.RiotID(riotID))
 				if err != nil {
