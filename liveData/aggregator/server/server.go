@@ -153,7 +153,7 @@ func (s *Server) promoteLoop() {
 }
 
 func (s *Server) promoteConns() {
-	errs := s.newConns.broadcast(s.prelimAgg)
+	errs := s.newConns.broadcast(s.finalAgg)
 	for _, err := range errs {
 		s.Errors <- errors.Trace(err)
 	}
