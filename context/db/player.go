@@ -13,6 +13,7 @@ type Player struct {
 	LcsID    LcsID
 	RiotID   RiotID
 	Name     string
+	PhotoURL string
 	TeamID   TeamID
 	Position position.Position
 	AddlPos  string
@@ -44,11 +45,12 @@ func (p *Player) Create(tx *sqlx.Tx) (PlayerID, error) {
 
 	res, err := tx.Exec(`
 		INSERT INTO players
-		VALUES (NULL, ?, ?, ?, ?, ?, ?)
+		VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
 		`,
 		p.LcsID,
 		p.RiotID,
 		p.Name,
+		p.PhotoURL,
 		p.TeamID,
 		p.Position,
 		p.AddlPos,
@@ -75,6 +77,7 @@ func (p *Player) Update(tx *sqlx.Tx) error {
 			lcsid = ?,
 			riotid = ?,
 			name = ?,
+			photourl = ?,
 			teamid = ?,
 			position = ?,
 			addlpos = ?
@@ -83,6 +86,7 @@ func (p *Player) Update(tx *sqlx.Tx) error {
 		p.LcsID,
 		p.RiotID,
 		p.Name,
+		p.PhotoURL,
 		p.TeamID,
 		p.Position,
 		p.AddlPos,

@@ -15,6 +15,7 @@ CREATE TABLE players (
 	lcsid INTEGER NOT NULL,
 	riotid INTEGER NOT NULL,
 	name VARCHAR(40) NOT NULL,
+	photourl VARCHAR(100) NOT NULL,
 	teamid INTEGER NOT NULL,
 	position INTEGER NOT NULL,
 	addlpos TEXT,

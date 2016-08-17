@@ -24,6 +24,7 @@ func (p *Player) ToPB() (*ctxPb.SavedPlayer, error) {
 			Lcsid:    int32(p.LcsID),
 			Riotid:   int32(p.RiotID),
 			Name:     p.Name,
+			Photourl: p.PhotoURL,
 			Teamid:   int32(p.TeamID),
 			Position: p.Position.String(),
 			Addlpos:  addlpos,
@@ -48,6 +49,7 @@ func (p *Player) FromPB(player *ctxPb.Player, id PlayerID) error {
 	p.LcsID = LcsID(player.Lcsid)
 	p.RiotID = RiotID(player.Riotid)
 	p.Name = player.Name
+	p.PhotoURL = player.Photourl
 	// TeamID foreign key omitted for internal translation
 	p.Position = position.FromString(player.Position)
 	p.AddlPos = string(addlposJSON)
@@ -70,6 +72,7 @@ func (p *Player) FromSavedPB(player *ctxPb.SavedPlayer) error {
 	p.LcsID = LcsID(player.Player.Lcsid)
 	p.RiotID = RiotID(player.Player.Riotid)
 	p.Name = player.Player.Name
+	p.PhotoURL = player.Player.Photourl
 	p.TeamID = TeamID(player.Player.Teamid)
 	p.Position = position.FromString(player.Player.Position)
 	p.AddlPos = string(addlposJSON)
@@ -91,6 +94,7 @@ func (p *Player) EqualsPB(player *ctxPb.Player) (bool, error) {
 	return (int32(player.Lcsid) == int32(p.LcsID) &&
 		int32(player.Riotid) == int32(p.RiotID) &&
 		player.Name == p.Name &&
+		player.Photourl == p.PhotoURL &&
 		int32(player.Teamid) == int32(p.TeamID) &&
 		player.Position == p.Position.String() &&
 		string(addlposJSON) == p.AddlPos), nil

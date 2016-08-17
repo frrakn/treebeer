@@ -30,9 +30,10 @@ message Player {
 	int32 lcsid = 2;
 	int32 riotid = 3;
 	string name = 4;
-	int32 teamid = 5;
-	string position = 6;
-	repeated string addlpos = 7;
+	string photourl = 5;
+	int32 teamid = 6;
+	string position = 7;
+	repeated string addlpos = 8;
 }
 
 message Game {

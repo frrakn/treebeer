@@ -23,6 +23,7 @@ type RiotPlayer struct {
 	Id        int32
 	RiotId    int32
 	Name      string
+	PhotoUrl  string
 	ProTeamId int32
 	Positions []string
 }
@@ -66,6 +67,7 @@ func (rp *RiotPlayer) ToCtxPlayer() (*ctxPb.Player, error) {
 		Lcsid:    rp.Id,
 		Riotid:   rp.RiotId,
 		Name:     rp.Name,
+		Photourl: rp.PhotoUrl,
 		Teamid:   rp.ProTeamId,
 		Position: rp.Positions[0],
 		Addlpos:  rp.Positions[1:],
